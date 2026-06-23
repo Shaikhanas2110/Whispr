@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "149563575591",
+    "project_id": "whispr-e0a09",
+    "storage_bucket": "whispr-e0a09.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:149563575591:android:6e66092605040c2f322d02",
+        "android_client_info": {
+          "package_name": "com.example.whispr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDazn9as0rK7zn6Obz8JP1MUHGwIIJO_3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

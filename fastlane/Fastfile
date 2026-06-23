@@ -1,0 +1,95 @@
+default_platform(:ios)
+
+# ── iOS ────────────────────────────────────────────────────
+platform :ios do
+
+  desc "Sync certificates and profiles via match"
+  lane :certs do
+    match(type: "appstore", readonly: true)
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(scheme: "Runner", clean: true)
+  end
+
+  desc "Build and upload to TestFlight (beta)"
+  lane :beta do
+    match(type: "appstore", readonly: true)
+    build_app(
+      workspace: "ios/Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: { "com.yourcompany.whispr" => "match AppStore com.yourcompany.whispr" }
+      }
+    )
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: "Bug fixes and performance improvements"
+    )
+    slack(message: "✅ iOS beta uploaded to TestFlight") if ENV["SLACK_URL"]
+  end
+
+  desc "Build and submit to App Store production"
+  lane :release do
+    match(type: "appstore", readonly: true)
+    build_app(
+      workspace: "ios/Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "app-store"
+    )
+    upload_to_app_store(
+      force: true,
+      skip_screenshots: false,
+      skip_metadata: false,
+      submit_for_review: false, # Set true for auto-submission
+      precheck_include_in_app_purchases: false
+    )
+  end
+end
+
+# ── Android ────────────────────────────────────────────────
+platform :android do
+
+  desc "Run tests"
+  lane :test do
+    gradle(task: "test")
+  end
+
+  desc "Build release AAB and upload to Play Store internal track"
+  lane :beta do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "android/",
+      properties: {
+        "android.injected.signing.store.file" => ENV["KEYSTORE_PATH"],
+        "android.injected.signing.store.password" => ENV["KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias" => ENV["KEY_ALIAS"],
+        "android.injected.signing.key.password" => ENV["KEY_PASSWORD"],
+      }
+    )
+    upload_to_play_store(
+      track: "internal",
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+    slack(message: "✅ Android beta uploaded to Play Store internal track") if ENV["SLACK_URL"]
+  end
+
+  desc "Promote internal build to production"
+  lane :release do
+    upload_to_play_store(
+      track: "internal",
+      track_promote_to: "production",
+      skip_upload_apk: true,
+      skip_upload_aab: true
+    )
+  end
+end

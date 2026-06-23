@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ───────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isNotBanned() {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return user == null || !(user.data.isBanned == true);
+    }
+
+    function isNotMuted() {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return user == null
+        || !(user.data.isMuted == true)
+        || (user.data.muteEndsAt != null && user.data.muteEndsAt < request.time);
+    }
+
+    function withinEditWindow(createdAt) {
+      return request.time < createdAt + duration.value(15, 'm');
+    }
+
+    // ── Users ─────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isOwner(userId);
+      allow update: if isAuth() && isOwner(userId) && (
+        // Only allow updating safe fields
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['pseudonym', 'avatarColorIndex', 'fcmToken', 'joinedCommunities'])
+      );
+      allow delete: if false; // Handled by Cloud Functions
+    }
+
+    // ── Posts ─────────────────────────────────────────────
+    match /posts/{postId} {
+      allow read: if resource.data.status == 'active' || isAuth();
+      allow create: if isAuth() && isNotBanned() && isNotMuted()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.content.size() <= 1000
+        && request.resource.data.status == 'active';
+      allow update: if isAuth() && isOwner(resource.data.authorId)
+        && withinEditWindow(resource.data.createdAt)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['content', 'status']);
+      allow delete: if false; // Soft-delete via update
+    }
+
+    // ── Comments ──────────────────────────────────────────
+    match /comments/{commentId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isNotBanned() && isNotMuted()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.content.size() <= 300;
+      allow update: if isAuth() && isOwner(resource.data.authorId)
+        && withinEditWindow(resource.data.createdAt)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']);
+      allow delete: if false;
+    }
+
+    // ── Reactions ─────────────────────────────────────────
+    match /reactions/{reactionId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isNotBanned()
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuth() && isOwner(resource.data.userId);
+      allow update: if isAuth() && isOwner(resource.data.userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactionType']);
+    }
+
+    // ── Communities ───────────────────────────────────────
+    match /communities/{communityId} {
+      allow read: if true; // Public
+      allow write: if false; // Admin-only via Cloud Functions
+    }
+
+    // ── Reports ───────────────────────────────────────────
+    match /reports/{reportId} {
+      allow read: if false; // Admin-only
+      allow create: if isAuth() && isNotBanned()
+        && request.resource.data.reporterId == request.auth.uid;
+    }
+
+    // ── Moderation queue ─────────────────────────────────
+    match /moderation_queue/{docId} {
+      allow read: if false; // Admin-only
+      allow write: if false; // Cloud Functions only
+    }
+  }
+}
