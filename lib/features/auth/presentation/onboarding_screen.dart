@@ -65,7 +65,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _updateRiveInputs(int activeIndex) {
     if (_stateMachineController == null) return;
 
-    // Set boolean controllers based on active indices cleanly
     _identityStateInput?.value = (activeIndex == 0);
     _discoveryStateInput?.value = (activeIndex == 1);
     _securityStateInput?.value = (activeIndex == 2);

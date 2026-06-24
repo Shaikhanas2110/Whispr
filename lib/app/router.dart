@@ -69,3 +69,4 @@ final routerProvider = Provider<GoRouter>((ref) => GoRouter(
         ),
       ],
     ));
+

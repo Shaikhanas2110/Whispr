@@ -11,7 +11,6 @@ import 'package:whispr/features/community/data/community_service.dart';
 import '../../post/data/post_service.dart';
 import '../../auth/data/auth_service.dart';
 import '../../../shared/widgets/w_avatar.dart';
-import '../../../app/constants.dart';
 
 class NewPalette {
   static const Color primary = Color(0xFFA7ED10);
@@ -378,8 +377,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                     ],
                     const SizedBox(height: 24),
-                    // Inside the SingleChildScrollView of create_post_screen.dart, replace your choose community block with this:
-
                     const Text(
                       'Choose community',
                       style: TextStyle(
@@ -389,7 +386,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           color: NewPalette.white),
                     ),
                     const SizedBox(height: 10),
-
                     ref.watch(communitiesStreamProvider).when(
                           loading: () => const SizedBox(
                             height: 44,
@@ -421,7 +417,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 }
                               });
                             }
-
                             return SizedBox(
                               height: 44,
                               child: ListView.builder(

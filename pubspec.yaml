@@ -67,9 +67,13 @@ flutter_launcher_icons:
   image_path: "assets/images/icon.png"
   adaptive_icon_background: "#1A1A2E"
   adaptive_icon_foreground: "assets/images/icon.png"
-
+   
 flutter:
   uses-material-design: true
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
   assets:
     - assets/images/
     - assets/images/welcome2.riv

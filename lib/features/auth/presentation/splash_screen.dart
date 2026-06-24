@@ -67,7 +67,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               child: const ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(22)),
                 child: RiveAnimation.asset(
-                  'assets/rive/splash_glow_engine.riv',
+                  'assets/images/welcome2.riv',
                   fit: BoxFit.cover,
                   animations: ['loop', 'idle'], // Fallback structural states
                   placeHolder: Center(
