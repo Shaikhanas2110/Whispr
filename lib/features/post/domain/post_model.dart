@@ -12,6 +12,7 @@ class WPost {
   final String communityName;
   final Map<String, int> reactions;
   final int commentCount;
+  final int likeCount; // Track total likes for the post
   final double trendScore;
   final String status; // active | removed | under_review
   final DateTime createdAt;
@@ -29,6 +30,7 @@ class WPost {
     required this.communityName,
     this.reactions = const {},
     this.commentCount = 0,
+    this.likeCount = 0, // Defaults to zero likes
     this.trendScore = 0,
     this.status = 'active',
     required this.createdAt,
@@ -51,6 +53,8 @@ class WPost {
       communityName: d['communityName'] ?? '',
       reactions: Map<String, int>.from(d['reactions'] ?? {}),
       commentCount: d['commentCount'] ?? 0,
+      likeCount:
+          d['likeCount'] ?? 0, // Parse securely from document schema maps
       trendScore: (d['trendScore'] ?? 0).toDouble(),
       status: d['status'] ?? 'active',
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -59,38 +63,49 @@ class WPost {
   }
 
   Map<String, dynamic> toFirestore() => {
-    'authorId': authorId,
-    'authorPseudonym': authorPseudonym,
-    'authorColorIndex': authorColorIndex,
-    'authorIsPremium': authorIsPremium,
-    'content': content,
-    'imageUrl': imageUrl,
-    'communityId': communityId,
-    'communityName': communityName,
-    'reactions': reactions,
-    'commentCount': commentCount,
-    'trendScore': trendScore,
-    'status': status,
-    'createdAt': Timestamp.fromDate(createdAt),
-  };
+        'authorId': authorId,
+        'authorPseudonym': authorPseudonym,
+        'authorColorIndex': authorColorIndex,
+        'authorIsPremium': authorIsPremium,
+        'content': content,
+        'imageUrl': imageUrl,
+        'communityId': communityId,
+        'communityName': communityName,
+        'reactions': reactions,
+        'commentCount': commentCount,
+        'likeCount':
+            likeCount, // Persists updates securely down to remote document instances
+        'trendScore': trendScore,
+        'status': status,
+        'createdAt': Timestamp.fromDate(createdAt),
+      };
 
-  WPost copyWith({String? myReaction, Map<String, int>? reactions, int? commentCount}) => WPost(
-    id: id,
-    authorId: authorId,
-    authorPseudonym: authorPseudonym,
-    authorColorIndex: authorColorIndex,
-    authorIsPremium: authorIsPremium,
-    content: content,
-    imageUrl: imageUrl,
-    communityId: communityId,
-    communityName: communityName,
-    reactions: reactions ?? this.reactions,
-    commentCount: commentCount ?? this.commentCount,
-    trendScore: trendScore,
-    status: status,
-    createdAt: createdAt,
-    myReaction: myReaction ?? this.myReaction,
-  );
+  WPost copyWith({
+    String? myReaction,
+    Map<String, int>? reactions,
+    int? commentCount,
+    int?
+        likeCount, // Included in state transitions to support fluid UI switches
+  }) =>
+      WPost(
+        id: id,
+        authorId: authorId,
+        authorPseudonym: authorPseudonym,
+        authorColorIndex: authorColorIndex,
+        authorIsPremium: authorIsPremium,
+        content: content,
+        imageUrl: imageUrl,
+        communityId: communityId,
+        communityName: communityName,
+        reactions: reactions ?? this.reactions,
+        commentCount: commentCount ?? this.commentCount,
+        likeCount:
+            likeCount ?? this.likeCount, // Seamless data preservation fallbacks
+        trendScore: trendScore,
+        status: status,
+        createdAt: createdAt,
+        myReaction: myReaction ?? this.myReaction,
+      );
 }
 
 class WComment {

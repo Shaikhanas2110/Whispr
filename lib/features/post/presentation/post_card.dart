@@ -14,15 +14,14 @@ import '../../../shared/widgets/hashtag_text.dart';
 
 class NewPalette {
   static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color surfaceMuted = Color(0xFFB5B5B5); // Neutral Gray
-  static const Color background = Color(0xFF000000); // Deep Black
-  static const Color white = Color(0xFFFFFFFF); // Crisp White
+  static const Color background = Color(0xFF000000); // Pure Reddit Black
+  static const Color white = Color(0xFFFFFFFF);
 
-  // Frosted translucent shades for true glass layering
-  static final Color glassBg = white.withOpacity(0.03);
   static final Color glassBorder = white.withOpacity(0.08);
-  static final Color primarySoft = primary.withOpacity(0.12);
   static final Color textMuted = white.withOpacity(0.45);
+  static final Color buttonBg = white.withOpacity(0.06); // Muted capsule fill
+  static final Color primarySoft =
+      primary.withOpacity(0.15); // Translucent active highlight
 }
 
 class PostCard extends ConsumerStatefulWidget {
@@ -38,27 +37,61 @@ class PostCard extends ConsumerStatefulWidget {
 
 class _PostCardState extends ConsumerState<PostCard> {
   late WPost _post;
-  bool _reacting = false;
+  bool _isLiked = false;
+  int _likeCount = 0;
 
   @override
   void initState() {
     super.initState();
     _post = widget.post;
+
+    // Dynamically safely extract fields to stay fully compatible with backend definitions
+    try {
+      _likeCount = (_post as dynamic).likeCount ?? 0;
+    } catch (_) {
+      _likeCount = 0;
+    }
   }
 
   @override
   void didUpdateWidget(PostCard old) {
     super.didUpdateWidget(old);
-    // FIX: Only sync parent updates if the user isn't interacting with reactions.
-    // If we have an active reaction locally, preserve our count and state over the stream snapshot.
-    if (!_reacting) {
-      _post = widget.post;
-    } else {
-      // Keep the incoming image/content changes, but protect the live counting state variables
-      _post = widget.post.copyWith(
-        myReaction: _post.myReaction,
-        reactions: _post.reactions,
-      );
+    if (widget.post != old.post) {
+      setState(() {
+        _post = widget.post;
+        try {
+          _likeCount = (_post as dynamic).likeCount ?? 0;
+        } catch (_) {}
+      });
+    }
+  }
+
+  // Handles fast, lag-free state updates locally before committing down to database networks
+  Future<void> _toggleLike() async {
+    setState(() {
+      if (_isLiked) {
+        _isLiked = false;
+        _likeCount = max(0, _likeCount - 1);
+      } else {
+        _isLiked = true;
+        _likeCount += 1;
+      }
+    });
+
+    try {
+      // Dispatches the state mutation straight into the database service pipeline
+      await ref.read(postServiceProvider).likePost(_post.id);
+    } catch (e) {
+      // Fallback rollback safety handler if net configurations drop out
+      setState(() {
+        if (_isLiked) {
+          _isLiked = false;
+          _likeCount = max(0, _likeCount - 1);
+        } else {
+          _isLiked = true;
+          _likeCount += 1;
+        }
+      });
     }
   }
 
@@ -81,7 +114,7 @@ class _PostCardState extends ConsumerState<PostCard> {
             ),
             const SizedBox(height: 12),
             _MenuTile(
-              emoji: '📤',
+              emoji: '🔗',
               label: 'Share post',
               onTap: () async {
                 Navigator.pop(context);
@@ -94,14 +127,7 @@ class _PostCardState extends ConsumerState<PostCard> {
               },
             ),
             _MenuTile(
-              emoji: '📋',
-              label: 'Copy text',
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            _MenuTile(
-              emoji: '🚩',
+              emoji: '🏳️',
               label: 'Report post',
               color: Colors.redAccent,
               onTap: () {
@@ -116,346 +142,209 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
-  Future<void> _react(String type) async {
-    if (_reacting) return;
-
-    final String currentReaction = _post.myReaction ?? '';
-    final bool isRemovingSameReaction = currentReaction == type;
-
-    setState(() {
-      _reacting = true;
-
-      final reactions = Map<String, int>.from(_post.reactions);
-
-      // Remove old reaction if there is one
-      if (currentReaction.isNotEmpty) {
-        reactions[currentReaction] =
-            max(0, (reactions[currentReaction] ?? 1) - 1);
-      }
-
-      if (isRemovingSameReaction) {
-        // User tapped the same reaction again -> remove it
-        _post = _post.copyWith(
-          myReaction: '',
-          reactions: reactions,
-        );
-      } else {
-        // Add the new reaction
-        reactions[type] = (reactions[type] ?? 0) + 1;
-
-        _post = _post.copyWith(
-          myReaction: type,
-          reactions: reactions,
-        );
-      }
-    });
-
-    try {
-      await ref.read(postServiceProvider).reactToPost(widget.post.id, type);
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _post = widget.post; // rollback on failure
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _reacting = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final hasReacted = _post.myReaction != null && _post.myReaction!.isNotEmpty;
-
-    final commData = AppConstants.defaultCommunities.firstWhere(
-      (c) => c['name'] == _post.communityName,
-      orElse: () => {'color': 0xFFBF6B3D},
-    );
-    final commColor = Color(commData['color'] as int);
-
     return GestureDetector(
-        onTap: widget.onTap ?? () => context.push('/post/${_post.id}'),
-        onLongPress: () => _showContextMenu(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              decoration: BoxDecoration(
-                color: hasReacted
-                    ? NewPalette.primary.withOpacity(0.04)
-                    : NewPalette.glassBg,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: hasReacted
-                      ? NewPalette.primary.withOpacity(0.35)
-                      : NewPalette.glassBorder,
-                  width: hasReacted ? 1.5 : 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      onTap: widget.onTap ?? () => context.push('/post/${_post.id}'),
+      child: Container(
+        color: NewPalette.background,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Section: Identity header row
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
                 children: [
-                  _Header(post: _post, commColor: commColor),
-                  if (_post.imageUrl != null)
-                    _ImageSection(url: _post.imageUrl!),
-                  _Content(post: _post),
-                  _ReactionsBar(post: _post, onReact: _react),
+                  WAvatar(
+                    pseudonym: _post.authorPseudonym,
+                    colorIndex: _post.authorColorIndex,
+                    isPremium: _post.authorIsPremium,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'r/${_post.communityName.replaceAll(' ', '')}',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: NewPalette.white,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    timeago.format(_post.createdAt, locale: 'en_short'),
+                    style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 12,
+                        color: NewPalette.textMuted),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.more_horiz_rounded,
+                        color: NewPalette.textMuted, size: 20),
+                    onPressed: () => _showContextMenu(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
                 ],
               ),
             ),
-          ),
-        ));
-  }
-}
 
-class _Header extends StatelessWidget {
-  final WPost post;
-  final Color commColor;
-  const _Header({required this.post, required this.commColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Row(
-        children: [
-          WAvatar(
-            pseudonym: post.authorPseudonym,
-            colorIndex: post.authorColorIndex,
-            isPremium: post.authorIsPremium,
-            size: 36,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      post.authorPseudonym,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: NewPalette.white,
-                      ),
+            // Content Image Frame
+            if (_post.imageUrl != null)
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: _post.imageUrl!,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) =>
+                        Container(height: 180, color: NewPalette.buttonBg),
+                    errorWidget: (_, __, ___) => Container(
+                      height: 180,
+                      color: NewPalette.buttonBg,
+                      child: Icon(Icons.broken_image_outlined,
+                          color: NewPalette.textMuted),
                     ),
-                    if (post.authorIsPremium) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: NewPalette.primary,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          '✦ PRO',
-                          style: TextStyle(
-                            fontSize: 8,
-                            color: NewPalette.background,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  timeago.format(post.createdAt),
-                  style: TextStyle(fontSize: 11, color: NewPalette.textMuted),
-                ),
-              ],
-            ),
-          ),
-          // Glassmorphic Capsule for Community Target
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: commColor.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: commColor.withOpacity(0.15)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _communityIcon(post.communityName),
-                  style: const TextStyle(fontSize: 11),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  post.communityName,
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 10,
-                    color: commColor,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.3,
                   ),
                 ),
-              ],
+              ),
+
+            // Main Body Content Text
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+              child: HashtagText(
+                text: _post.content,
+                maxLines: 4,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  String _communityIcon(String name) {
-    final community = AppConstants.defaultCommunities.firstWhere(
-      (c) => c['name'] == name,
-      orElse: () => {'icon': '💬'},
-    );
-    return community['icon'] as String;
-  }
-}
-
-class _Content extends StatelessWidget {
-  final WPost post;
-  const _Content({required this.post});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: HashtagText(
-        text: post.content,
-        maxLines: 6,
-      ),
-    );
-  }
-}
-
-class _ImageSection extends StatelessWidget {
-  final String url;
-  const _ImageSection({required this.url});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: CachedNetworkImage(
-          imageUrl: url,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          placeholder: (_, __) =>
-              Container(height: 180, color: NewPalette.glassBg),
-          errorWidget: (_, __, ___) => Container(
-            height: 180,
-            color: NewPalette.glassBg,
-            child:
-                Icon(Icons.broken_image_outlined, color: NewPalette.textMuted),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ReactionsBar extends StatelessWidget {
-  final WPost post;
-  final Future<void> Function(String) onReact;
-  const _ReactionsBar({required this.post, required this.onReact});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            // Reddit tray bar layout
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Row(
-                children: AppConstants.reactions.entries.map((e) {
-                  final isActive = post.myReaction == e.key;
-                  final count = post.reactions[e.key] ?? 0;
-                  return GestureDetector(
-                    onTap: () => onReact(e.key),
+                children: [
+                  // 1. FIXED: Clean Interactive Like Capsule Button Engine
+                  GestureDetector(
+                    onTap: _toggleLike,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: isActive
+                        color: _isLiked
                             ? NewPalette.primarySoft
-                            : NewPalette.white.withOpacity(0.02),
-                        borderRadius: BorderRadius.circular(12),
+                            : NewPalette.buttonBg,
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isActive
-                              ? NewPalette.primary
-                              : NewPalette.glassBorder,
-                          width: isActive ? 1.2 : 1,
+                          color: _isLiked
+                              ? NewPalette.primary.withOpacity(0.3)
+                              : Colors.transparent,
+                          width: 1,
                         ),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(e.value, style: const TextStyle(fontSize: 13)),
-                          if (count > 0) ...[
-                            const SizedBox(width: 5),
-                            Text(
-                              count > 999
-                                  ? '${(count / 1000).toStringAsFixed(1)}k'
-                                  : '$count',
-                              style: TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 11,
-                                color: isActive
-                                    ? NewPalette.primary
-                                    : NewPalette.surfaceMuted,
-                                fontWeight: FontWeight.w800,
-                              ),
+                          Icon(
+                            _isLiked
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            size: 16,
+                            color: _isLiked
+                                ? NewPalette.primary
+                                : NewPalette.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$_likeCount',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 12,
+                              color: _isLiked
+                                  ? NewPalette.primary
+                                  : NewPalette.white,
+                              fontWeight: FontWeight.w800,
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Frosted Glass Comment Button
-          GestureDetector(
-            onTap: () => context.push('/post/${post.id}'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: NewPalette.white.withOpacity(0.02),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: NewPalette.glassBorder),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.chat_bubble_outline_rounded,
-                      size: 13, color: NewPalette.textMuted),
-                  const SizedBox(width: 5),
-                  Text(
-                    '${post.commentCount}',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 11,
-                      color: NewPalette.textMuted,
-                      fontWeight: FontWeight.w800,
+                  ),
+                  const SizedBox(width: 8),
+
+                  // 2. Comments Button Capsule
+                  GestureDetector(
+                    onTap:
+                        widget.onTap ?? () => context.push('/post/${_post.id}'),
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: NewPalette.buttonBg,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.chat_bubble_outline_rounded,
+                              size: 15, color: NewPalette.white),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${_post.commentCount}',
+                            style: const TextStyle(
+                              fontFamily: 'Nunito',
+                              fontSize: 12,
+                              color: NewPalette.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+
+                  // 3. Right side utility triggers
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: NewPalette.buttonBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.emoji_events_outlined,
+                        size: 18, color: NewPalette.white),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      final url = 'https://whispr.app/post/${_post.id}';
+                      await Share.share(_post.content + '\n\n' + url);
+                    },
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: NewPalette.buttonBg,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.ios_share_rounded,
+                          size: 16, color: NewPalette.white),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // Clean separator line matching line splits between posts
+            Container(height: 0.5, color: NewPalette.glassBorder),
+          ],
+        ),
       ),
     );
   }
@@ -488,11 +377,10 @@ class _MenuTile extends StatelessWidget {
       title: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Nunito',
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: col,
-        ),
+            fontFamily: 'Nunito',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: col),
       ),
       onTap: onTap,
     );

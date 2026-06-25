@@ -326,4 +326,41 @@ class PostService {
       ]);
     }
   }
+
+  // *** Like / unlike post (toggle tracking engine) ***
+  Future<void> likePost(String postId) async {
+    if (_uid == null) return;
+
+    // References a sub-collection tracking map inside the targeted post document
+    final likeRef = _db
+        .collection(AppConstants.postsCollection)
+        .doc(postId)
+        .collection('likes')
+        .doc(_uid);
+
+    final postRef = _db.collection(AppConstants.postsCollection).doc(postId);
+    final existing = await likeRef.get();
+
+    final batch = _db.batch();
+
+    if (existing.exists) {
+      // 1. If user already liked the post -> Unlike it
+      batch.delete(likeRef);
+      batch.update(postRef, {
+        'likeCount': FieldValue.increment(-1),
+      });
+    } else {
+      // 2. If user hasn't liked the post yet -> Like it
+      batch.set(likeRef, {
+        'likedBy': _uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      batch.update(postRef, {
+        'likeCount': FieldValue.increment(1),
+      });
+    }
+
+    // Commit changes to Firestore atomically
+    await batch.commit();
+  }
 }

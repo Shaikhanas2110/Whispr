@@ -59,7 +59,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         _likedComments.remove(comment.id);
         final rawCount =
             (_likeCountOverrides[comment.id] ?? comment.likeCount) - 1;
-        // FIX: Clamp execution limits to eliminate negative counter boundaries completely
         _likeCountOverrides[comment.id] = rawCount.clamp(0, 999999);
       } else {
         _likedComments.add(comment.id);
@@ -104,6 +103,82 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
   }
 
+  // Warning Confirmation Sheet to protect against accidental deletes
+  void _confirmDeletePost(BuildContext context, WPost post) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: NewPalette.background,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Colors.redAccent, width: 1)),
+        title: const Text('Delete Whisper?',
+            style: TextStyle(
+                fontFamily: 'Nunito',
+                color: Colors.white,
+                fontWeight: FontWeight.w900)),
+        content: const Text(
+            'This action removes the post permanently from everyone\'s feed views. This cannot be reversed.',
+            style: TextStyle(
+                fontFamily: 'Nunito', color: NewPalette.white, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    fontFamily: 'Nunito',
+                    color: Colors.white60,
+                    fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // Close dialog
+              try {
+                await ref
+                    .read(postServiceProvider)
+                    .deletePost(post.id, post.authorId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Post deleted successfully 🗑️',
+                          style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.bold,
+                              color: NewPalette.background)),
+                      backgroundColor: NewPalette.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  Navigator.pop(
+                      context); // Safe back-route navigation to the feed layer
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Failed to delete post: $e'),
+                        backgroundColor: Colors.redAccent),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Delete',
+                style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _commentCtrl.dispose();
@@ -114,6 +189,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   Widget build(BuildContext context) {
     final postAsync = ref.watch(_postDetailProvider(widget.postId));
     final commentsStream = ref.watch(_commentsProvider(widget.postId));
+    final currentUserAsync =
+        ref.watch(currentUserProvider); // Monitors auth identity context
 
     return Scaffold(
       backgroundColor: NewPalette.background,
@@ -146,9 +223,32 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.flag_outlined, color: Colors.redAccent),
-            onPressed: () => showReportSheet(context, widget.postId),
+
+          // GATED: Render action items conditionally based on identity match parameters
+          postAsync.maybeWhen(
+            data: (post) {
+              if (post == null) return const SizedBox.shrink();
+              final currentUserId = currentUserAsync.valueOrNull?.uid;
+
+              // Only displays for the true author matching the database record
+              if (currentUserId == post.authorId) {
+                return IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.redAccent),
+                  onPressed: () => _confirmDeletePost(context, post),
+                );
+              }
+
+              // Displays flag layout fallback strictly for non-authors
+              return IconButton(
+                icon: const Icon(Icons.flag_outlined, color: Colors.redAccent),
+                onPressed: () => showReportSheet(context, widget.postId),
+              );
+            },
+            orElse: () => IconButton(
+              icon: const Icon(Icons.flag_outlined, color: Colors.redAccent),
+              onPressed: () => showReportSheet(context, widget.postId),
+            ),
           ),
         ],
       ),
@@ -240,7 +340,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   data: (rawComments) {
                     final comments = List<WComment>.from(rawComments);
 
-                    // FIX: Process replies using deep recursion map definitions
                     final parentToChildrenMap = <String, List<WComment>>{};
                     final topLevel = <WComment>[];
 
@@ -262,7 +361,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
                     final flatList = <_FlatCommentItem>[];
 
-                    // Recursive builder engine to map any level of nested replies
                     void addSubTree(
                         String parentId, int rootIndex, int currentDepth) {
                       final directReplies = parentToChildrenMap[parentId] ?? [];
@@ -273,7 +371,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           rootIndex: rootIndex,
                           indentationLevel: currentDepth,
                         ));
-                        // Cascade down deeper execution chains recursively
                         addSubTree(reply.id, rootIndex, currentDepth + 1);
                       }
                     }
@@ -419,7 +516,7 @@ class _FlatCommentItem {
   final WComment comment;
   final bool isReply;
   final int rootIndex;
-  final int indentationLevel; // Added structural indentation trackers
+  final int indentationLevel;
 
   const _FlatCommentItem({
     required this.comment,
@@ -428,7 +525,6 @@ class _FlatCommentItem {
     this.indentationLevel = 0,
   });
 }
-
 
 class _RenderedCommentNode extends StatelessWidget {
   final _FlatCommentItem item;
@@ -448,8 +544,6 @@ class _RenderedCommentNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final comment = item.comment;
-
-    // Instagram Style: Dynamic metrics based on tree level depth
     final bool isNestedReply = item.indentationLevel > 0;
     final double leftPaddingOffset = isNestedReply
         ? (24.0 + (item.indentationLevel - 1) * 16.0).clamp(0.0, 64.0)
@@ -465,14 +559,10 @@ class _RenderedCommentNode extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                children: [
-                  WAvatar(
-                    pseudonym: comment.authorPseudonym,
-                    colorIndex: comment.authorColorIndex,
-                    size: avatarSize,
-                  ),
-                ],
+              WAvatar(
+                pseudonym: comment.authorPseudonym,
+                colorIndex: comment.authorColorIndex,
+                size: avatarSize,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -564,7 +654,6 @@ class _RenderedCommentNode extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          // Micro Divider Line tracking nested levels cleanly
           if (!isNestedReply)
             Padding(
               padding: const EdgeInsets.only(left: 44.0, top: 4.0),

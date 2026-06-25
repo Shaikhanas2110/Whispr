@@ -8,15 +8,14 @@ import '../../auth/data/auth_service.dart';
 import '../../auth/domain/user_model.dart';
 import '../../../shared/widgets/w_avatar.dart';
 import '../../../app/constants.dart';
+import '../../community/data/community_service.dart'; // Ensure this matches your public provider location path
 
-// Locally defined palette tokens based on your specified hex codes
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color surfaceMuted = Color(0xFFB5B5B5); // Neutral Gray
-  static const Color background = Color(0xFF000000); // Deep Black
-  static const Color white = Color(0xFFFFFFFF); // Crisp White
+  static const Color primary = Color(0xFFA7ED10);
+  static const Color surfaceMuted = Color(0xFFB5B5B5);
+  static const Color background = Color(0xFF000000);
+  static const Color white = Color(0xFFFFFFFF);
 
-  // Derived style opacities for sleek UI nesting
   static final Color cardBg = surfaceMuted.withOpacity(0.12);
   static final Color border = surfaceMuted.withOpacity(0.25);
   static final Color primarySoft = primary.withOpacity(0.15);
@@ -37,7 +36,6 @@ class ProfileScreen extends ConsumerWidget {
         elevation: 0,
         centerTitle: false,
         titleSpacing: 16,
-        // REDESIGNED: Premium Stacked Typography Identity matching your new app aesthetic
         title: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -54,14 +52,14 @@ class ProfileScreen extends ConsumerWidget {
                       fontFamily: 'Nunito',
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      color: NewPalette.primary, // Vibrant Lime Accent
+                      color: NewPalette.primary,
                       letterSpacing: -0.5,
                     ),
                     children: [
                       TextSpan(
                         text: 'rofile',
                         style: TextStyle(
-                          color: NewPalette.white, // High Contrast Crisp White
+                          color: NewPalette.white,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.2,
                         ),
@@ -92,7 +90,6 @@ class ProfileScreen extends ConsumerWidget {
           child: Container(height: 1, color: NewPalette.border),
         ),
         actions: [
-          // Settings Button with clean hover/tap target area matching the custom app buttons
           GestureDetector(
             onTap: () => _showSettings(context, ref),
             child: Container(
@@ -123,7 +120,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: Text('Not signed in',
                     style: TextStyle(
                         fontFamily: 'Nunito', color: NewPalette.white)))
-            : _ProfileBody(user: user, ref: ref),
+            : _ProfileBody(user: user),
       ),
     );
   }
@@ -138,10 +135,9 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _ProfileBody extends StatelessWidget {
+class _ProfileBody extends ConsumerWidget {
   final WUser user;
-  final WidgetRef ref;
-  const _ProfileBody({required this.user, required this.ref});
+  const _ProfileBody({required this.user});
 
   void _confirmRegeneratePseudonym(BuildContext context, WUser user) {
     showDialog(
@@ -336,14 +332,15 @@ class _ProfileBody extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final communitiesAsync = ref.watch(communitiesStreamProvider);
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Profile identity profile background card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -409,7 +406,6 @@ class _ProfileBody extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                // Stats configuration layout
                 Row(
                   children: [
                     _StatPill(label: 'Posts', value: '${user.postCount}'),
@@ -423,10 +419,7 @@ class _ProfileBody extends StatelessWidget {
               ],
             ),
           ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
-
           const SizedBox(height: 16),
-
-          // Premium promo item row
           if (!user.isPremium)
             Container(
               width: double.infinity,
@@ -480,10 +473,7 @@ class _ProfileBody extends StatelessWidget {
                 ],
               ),
             ).animate(delay: 150.ms).fadeIn(duration: 400.ms),
-
           const SizedBox(height: 20),
-
-          // Communities list header context
           const Text('Your Communities',
               style: TextStyle(
                   fontFamily: 'Nunito',
@@ -491,16 +481,42 @@ class _ProfileBody extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: NewPalette.white)),
           const SizedBox(height: 10),
-          if (user.joinedCommunities.isEmpty)
-            const _EmptySection(
-                label: 'You haven\'t joined any communities yet'),
-          ...AppConstants.defaultCommunities
-              .where((c) => user.joinedCommunities.contains(c['id']))
-              .map((c) => _CommunityRow(data: c)),
+          communitiesAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: NewPalette.primary),
+              ),
+            ),
+            error: (err, _) =>
+                const _EmptySection(label: 'Failed to synchronize communities'),
+            data: (allCommunitiesList) {
+              // Normalize user joined strings to lowercase trimmed formats to prevent mismatch drops
+              final userJoinedIds = user.joinedCommunities
+                  .map((id) => id.trim().toLowerCase())
+                  .toSet();
 
+              // FIX: Case-insensitive lookups ensure custom user-created communities pass cleanly
+              final joinedCommunitiesList = allCommunitiesList.where((c) {
+                final String communityId =
+                    (c['id'] as String? ?? '').trim().toLowerCase();
+                return userJoinedIds.contains(communityId);
+              }).toList();
+
+              if (joinedCommunitiesList.isEmpty) {
+                return const _EmptySection(
+                    label: "You haven't joined any communities yet");
+              }
+
+              return Column(
+                children: joinedCommunitiesList
+                    .map((c) => _CommunityRow(data: c))
+                    .toList(),
+              );
+            },
+          ),
           const SizedBox(height: 20),
-
-          // Account structural setup
           const Text('Account',
               style: TextStyle(
                   fontFamily: 'Nunito',
@@ -609,10 +625,11 @@ class _CommunityRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(data['icon'] as String, style: const TextStyle(fontSize: 18)),
+          Text(data['icon'] as String? ?? '💬',
+              style: const TextStyle(fontSize: 18)),
           const SizedBox(width: 12),
           Expanded(
-              child: Text(data['name'] as String,
+              child: Text(data['name'] as String? ?? '',
                   style: const TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
@@ -677,9 +694,6 @@ class _SettingsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Structural logic for toggles maintained
-    // final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
       child: Column(
@@ -703,15 +717,6 @@ class _SettingsSheet extends ConsumerWidget {
                   fontWeight: FontWeight.w800,
                   color: NewPalette.white)),
           const SizedBox(height: 16),
-          // _SettingsRow(
-          //   icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-          //   label: isDark ? 'Dark Mode' : 'Light Mode (Warm)',
-          //   trailing: Switch(
-          //     value: isDark,
-          //     onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
-          //     activeColor: NewPalette.primary,
-          //   ),
-          // ),
           _SettingsRow(
             icon: Icons.notifications_outlined,
             label: 'Push Notifications',

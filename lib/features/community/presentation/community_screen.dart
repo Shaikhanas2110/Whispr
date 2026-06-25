@@ -550,26 +550,26 @@ class _CommunityCard extends ConsumerWidget {
         ? '${(realMembers / 1000).toStringAsFixed(1)}k'
         : '$realMembers';
 
+    // Safe extraction fallback mechanism mapping keys regardless of document schemas
+    final String badgeIcon =
+        data['icon'] as String? ?? data['emoji'] as String? ?? '🫧';
+
     return GestureDetector(
       onTap: () => context.push('/community/$communityId'),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         decoration: BoxDecoration(
-          // Pure Glassmorphism: Semi-translucent surface shifted dynamically based on joined state
           color: isJoined
               ? color.withOpacity(0.06)
               : NewPalette.white.withOpacity(0.02),
-          borderRadius:
-              BorderRadius.circular(24), // Sleek, smooth rounded corners
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            // Specular Highlight Border Effect
             color: isJoined
                 ? color.withOpacity(0.35)
                 : NewPalette.white.withOpacity(0.06),
             width: isJoined ? 1.5 : 1.0,
           ),
           boxShadow: [
-            // Ambient micro shadow for depth separation
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
               blurRadius: 16,
@@ -597,7 +597,7 @@ class _CommunityCard extends ConsumerWidget {
                 ),
                 child: Center(
                   child: Text(
-                    data['icon'] as String? ?? '💬',
+                    badgeIcon, // FIXED: Now references the sanitized live badge emoji variable safely
                     style: const TextStyle(fontSize: 20),
                   ),
                 ),
@@ -623,7 +623,6 @@ class _CommunityCard extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Dynamic Membership Identity Indicator Dot
                   Container(
                     width: 6,
                     height: 6,

@@ -23,26 +23,38 @@ class CommunityDetailScreen extends ConsumerWidget {
   final String communityId;
   const CommunityDetailScreen({super.key, required this.communityId});
 
-  Map<String, dynamic> get _meta =>
-      AppConstants.defaultCommunities.firstWhere((c) => c['id'] == communityId,
-          orElse: () => {
-                'name': communityId,
-                'icon': '💬',
-                'color': 0xFFB5B5B5,
-              });
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = Color(_meta['color'] as int);
-
-    // Watch real-time data providers
+    // 1. Listen to real-time data streams
     final postsAsync = ref.watch(communityPostsStreamProvider(communityId));
     final joinedAsync = ref.watch(joinedCommunitiesProvider);
-    final isJoined = joinedAsync.valueOrNull?.contains(communityId) ?? false;
+    final communitiesAsync = ref.watch(communitiesStreamProvider);
+
+    final normalizedTargetId = communityId.trim().toLowerCase();
+    final isJoined = joinedAsync.valueOrNull?.any(
+          (id) => id.trim().toLowerCase() == normalizedTargetId,
+        ) ??
+        false;
+
+    // 2. RESOLUTION: Dynamically look up meta profiles from the active Firestore stream
+    final Map<String, dynamic> meta = communitiesAsync.maybeWhen(
+      data: (list) => list.firstWhere(
+        (c) => (c['id'] as String).trim().toLowerCase() == normalizedTargetId,
+        orElse: () => {'name': communityId, 'icon': '💬', 'color': 0xFFB5B5B5},
+      ),
+      orElse: () => AppConstants.defaultCommunities.firstWhere(
+        (c) => (c['id'] as String).trim().toLowerCase() == normalizedTargetId,
+        orElse: () => {'name': communityId, 'icon': '💬', 'color': 0xFFB5B5B5},
+      ),
+    );
+
+    final color = Color(meta['color'] as int);
 
     return Scaffold(
       backgroundColor: NewPalette.background,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics()),
         slivers: [
           // 1. Hero Header Sliver Block
           SliverAppBar(
@@ -51,8 +63,6 @@ class CommunityDetailScreen extends ConsumerWidget {
             backgroundColor: NewPalette.background,
             elevation: 0,
             iconTheme: const IconThemeData(color: NewPalette.white),
-
-            // Integrated Join/Leave Button in Actions
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
@@ -93,7 +103,6 @@ class CommunityDetailScreen extends ConsumerWidget {
                 ),
               ),
             ],
-
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.pin,
               background: Container(
@@ -104,7 +113,8 @@ class CommunityDetailScreen extends ConsumerWidget {
                       right: -20,
                       top: -10,
                       child: Text(
-                        _meta['icon'] as String,
+                        meta['icon'] as String? ??
+                            '💬', // Shows live custom icon from stream
                         style: TextStyle(
                           fontSize: 130,
                           color: color.withOpacity(0.08),
@@ -133,13 +143,16 @@ class CommunityDetailScreen extends ConsumerWidget {
                                     color: color.withOpacity(0.3), width: 2),
                               ),
                               child: Center(
-                                child: Text(_meta['icon'] as String,
-                                    style: const TextStyle(fontSize: 32)),
+                                child: Text(
+                                  meta['icon'] as String? ??
+                                      '💬', // Shows live custom icon from stream
+                                  style: const TextStyle(fontSize: 32),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              _meta['name'] as String,
+                              meta['name'] as String? ?? communityId,
                               style: const TextStyle(
                                 fontFamily: 'Nunito',
                                 fontSize: 26,
@@ -160,6 +173,7 @@ class CommunityDetailScreen extends ConsumerWidget {
           // 2. Stream Resolution Pipeline
           postsAsync.when(
             loading: () => const SliverFillRemaining(
+              hasScrollBody: false,
               child: Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
@@ -168,15 +182,18 @@ class CommunityDetailScreen extends ConsumerWidget {
               ),
             ),
             error: (err, _) => SliverFillRemaining(
+              hasScrollBody: false,
               child: Center(
                 child: Text(
                   'Error: $err',
-                  style: const TextStyle(color: Colors.redAccent),
+                  style: const TextStyle(
+                      color: Colors.redAccent, fontFamily: 'Nunito'),
                 ),
               ),
             ),
             data: (posts) => posts.isEmpty
                 ? SliverFillRemaining(
+                    hasScrollBody: false,
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
