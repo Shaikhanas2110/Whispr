@@ -57,7 +57,7 @@ class SearchService {
 
 final searchServiceProvider = Provider<SearchService>((ref) => SearchService());
 
-final _searchQueryProvider = StateProvider<String>((ref) => '');
+// final _searchQueryProvider = StateProvider<String>((ref) => '');
 
 final searchResultsProvider =
     FutureProvider.family<List<WPost>, String>((ref, query) {
