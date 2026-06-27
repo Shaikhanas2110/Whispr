@@ -13,12 +13,11 @@ final postServiceProvider = Provider<PostService>((ref) => PostService());
 
 class PostService {
   final _db = FirebaseFirestore.instance;
-
   final _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // *** Fetch feeds ***
+  // ── Fetch feeds ──────────────────────────────────────────────────────────
   Future<List<WPost>> fetchTrendingPosts({DocumentSnapshot? lastDoc}) async {
     var q = _db
         .collection(AppConstants.postsCollection)
@@ -56,8 +55,9 @@ class PostService {
   }
 
   Future<List<WPost>> _enrichPosts(List<DocumentSnapshot> docs) async {
-    if (_uid == null || docs.isEmpty)
+    if (_uid == null || docs.isEmpty) {
       return docs.map((d) => WPost.fromFirestore(d)).toList();
+    }
 
     final postIds = docs.map((d) => d.id).toList();
     final reactionDocs = await _db
@@ -76,66 +76,43 @@ class PostService {
         .toList();
   }
 
+  // ── Cloudinary upload (images only — GIFs are stored as URLs) ────────────
   Future<String?> _uploadImage({
     File? file,
     Uint8List? webImage,
     required String uid,
   }) async {
     try {
-      final uri = Uri.parse(
-        "https://api.cloudinary.com/v1_1/dcfsy3pdj/image/upload",
-      );
+      final uri =
+          Uri.parse("https://api.cloudinary.com/v1_1/dcfsy3pdj/image/upload");
 
-      var request = http.MultipartRequest(
-        "POST",
-        uri,
-      );
-
+      var request = http.MultipartRequest("POST", uri);
       request.fields['upload_preset'] = 'anas2110';
 
-      // Mobile upload
       if (file != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'file',
-            file.path,
-          ),
-        );
-      }
-
-      // Web upload
-      else if (webImage != null) {
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            webImage,
-            filename: 'upload.jpg',
-          ),
-        );
+        request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      } else if (webImage != null) {
+        request.files.add(http.MultipartFile.fromBytes('file', webImage,
+            filename: 'upload.jpg'));
       } else {
         return null;
       }
 
       var response = await request.send();
-
       final responseData = await response.stream.bytesToString();
-
-      print("CLOUDINARY STATUS: ${response.statusCode}");
-      print("CLOUDINARY RESPONSE: $responseData");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(responseData);
-
-        return data['secure_url'];
-      } else {
-        return null;
+        return data['secure_url'] as String?;
       }
+      return null;
     } catch (e) {
       print("CLOUDINARY ERROR: $e");
       return null;
     }
   }
 
+  // ── Create post ───────────────────────────────────────────────────────────
   Future<void> createPost({
     required WUser author,
     required String content,
@@ -143,21 +120,23 @@ class PostService {
     required String communityName,
     File? imageFile,
     Uint8List? webImage,
+    String? gifUrl, // <-- NEW: direct GIF URL from Tenor
   }) async {
     String? imageUrl;
 
     try {
-      // Upload image if exists
+      // If a local image was picked, upload it to Cloudinary
       if (imageFile != null || webImage != null) {
         imageUrl = await _uploadImage(
           file: imageFile,
           webImage: webImage,
           uid: author.uid,
         );
-
-        if (imageUrl == null) {
-          throw Exception("Image upload failed");
-        }
+        if (imageUrl == null) throw Exception("Image upload failed");
+      }
+      // If a GIF URL was provided, use it directly (no upload needed)
+      else if (gifUrl != null) {
+        imageUrl = gifUrl;
       }
 
       final docRef = _db.collection(AppConstants.postsCollection).doc();
@@ -170,23 +149,19 @@ class PostService {
         authorIsPremium: author.isPremium,
         content: content,
         imageUrl: imageUrl,
+        isGif: gifUrl != null, // <-- tag as GIF so UI can render correctly
         communityId: communityId,
         communityName: communityName,
         createdAt: DateTime.now(),
       );
 
       final batch = _db.batch();
-
       batch.set(docRef, post.toFirestore());
-
       batch.set(
         _db.collection(AppConstants.usersCollection).doc(author.uid),
-        {
-          'postCount': FieldValue.increment(1),
-        },
+        {'postCount': FieldValue.increment(1)},
         SetOptions(merge: true),
       );
-
       await batch.commit();
     } catch (e) {
       print("CREATE POST ERROR: $e");
@@ -194,7 +169,7 @@ class PostService {
     }
   }
 
-  // *** React to post ***
+  // ── React to post ─────────────────────────────────────────────────────────
   Future<void> reactToPost(String postId, String reactionType) async {
     if (_uid == null) return;
 
@@ -210,11 +185,9 @@ class PostService {
     if (existing.docs.isNotEmpty) {
       final oldType = existing.docs.first.data()['reactionType'] as String;
       if (oldType == reactionType) {
-        // *** Remove reaction ***
         batch.delete(existing.docs.first.reference);
         batch.update(postRef, {'reactions.$oldType': FieldValue.increment(-1)});
       } else {
-        // *** Change reaction ***
         batch.update(
             existing.docs.first.reference, {'reactionType': reactionType});
         batch.update(postRef, {
@@ -223,7 +196,6 @@ class PostService {
         });
       }
     } else {
-      //  *** New reaction ***
       batch.set(_db.collection(AppConstants.reactionsCollection).doc(), {
         'userId': _uid,
         'postId': postId,
@@ -237,7 +209,7 @@ class PostService {
     await batch.commit();
   }
 
-  // *** Delete post ***
+  // ── Delete post ───────────────────────────────────────────────────────────
   Future<void> deletePost(String postId, String authorId) async {
     if (_uid != authorId) throw Exception('Not authorized');
     await _db
@@ -246,7 +218,7 @@ class PostService {
         .update({'status': 'removed'});
   }
 
-  // *** Report post ***
+  // ── Report post ───────────────────────────────────────────────────────────
   Future<void> reportPost(String postId, String reason) async {
     if (_uid == null) return;
     await _db.collection(AppConstants.reportsCollection).add({
@@ -257,7 +229,7 @@ class PostService {
     });
   }
 
-  // *** Fetch single post ***
+  // ── Fetch single post ─────────────────────────────────────────────────────
   Future<WPost?> fetchPost(String postId) async {
     final doc =
         await _db.collection(AppConstants.postsCollection).doc(postId).get();
@@ -265,6 +237,7 @@ class PostService {
     return WPost.fromFirestore(doc);
   }
 
+  // ── Comments stream ───────────────────────────────────────────────────────
   Stream<List<WComment>> commentsStream(String postId) {
     return _db
         .collection(AppConstants.commentsCollection)
@@ -272,18 +245,18 @@ class PostService {
         .snapshots()
         .map((s) {
       final comments = s.docs.map((d) => WComment.fromFirestore(d)).toList();
-
       comments.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-
       return comments;
     });
   }
 
+  // ── Add comment (now supports gifUrl) ────────────────────────────────────
   Future<void> addComment({
     required WUser author,
     required String postId,
     required String content,
     String? parentId,
+    String? gifUrl, // <-- NEW: optional GIF in comments
   }) async {
     final batch = _db.batch();
     final commentRef = _db.collection(AppConstants.commentsCollection).doc();
@@ -294,6 +267,8 @@ class PostService {
       'authorColorIndex': author.avatarColorIndex,
       'content': content,
       'parentId': parentId,
+      'gifUrl': gifUrl, // stored as-is; null if no GIF
+      'isGif': gifUrl != null,
       'likeCount': 0,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -303,7 +278,7 @@ class PostService {
     await batch.commit();
   }
 
-// *** Like / unlike comment (toggle) ***
+  // ── Like / unlike comment ─────────────────────────────────────────────────
   Future<void> likeComment(String commentId) async {
     if (_uid == null) return;
     final likeRef = _db
@@ -327,11 +302,10 @@ class PostService {
     }
   }
 
-  // *** Like / unlike post (toggle tracking engine) ***
+  // ── Like / unlike post ────────────────────────────────────────────────────
   Future<void> likePost(String postId) async {
     if (_uid == null) return;
 
-    // References a sub-collection tracking map inside the targeted post document
     final likeRef = _db
         .collection(AppConstants.postsCollection)
         .doc(postId)
@@ -340,27 +314,19 @@ class PostService {
 
     final postRef = _db.collection(AppConstants.postsCollection).doc(postId);
     final existing = await likeRef.get();
-
     final batch = _db.batch();
 
     if (existing.exists) {
-      // 1. If user already liked the post -> Unlike it
       batch.delete(likeRef);
-      batch.update(postRef, {
-        'likeCount': FieldValue.increment(-1),
-      });
+      batch.update(postRef, {'likeCount': FieldValue.increment(-1)});
     } else {
-      // 2. If user hasn't liked the post yet -> Like it
       batch.set(likeRef, {
         'likedBy': _uid,
         'createdAt': FieldValue.serverTimestamp(),
       });
-      batch.update(postRef, {
-        'likeCount': FieldValue.increment(1),
-      });
+      batch.update(postRef, {'likeCount': FieldValue.increment(1)});
     }
 
-    // Commit changes to Firestore atomically
     await batch.commit();
   }
 }

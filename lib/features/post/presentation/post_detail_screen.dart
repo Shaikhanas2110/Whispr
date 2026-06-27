@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:giphy_get/giphy_get.dart';
 import '../../post/data/post_service.dart';
 import '../../post/domain/post_model.dart';
 import '../../auth/data/auth_service.dart';
@@ -11,10 +13,10 @@ import '../../../app/constants.dart';
 import 'package:share_plus/share_plus.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color surfaceMuted = Color(0xFFB5B5B5); // Neutral Gray
-  static const Color background = Color(0xFF000000); // Deep Black
-  static const Color white = Color(0xFFFFFFFF); // Crisp White
+  static const Color primary = Color(0xFFA7ED10);
+  static const Color surfaceMuted = Color(0xFFB5B5B5);
+  static const Color background = Color(0xFF000000);
+  static const Color white = Color(0xFFFFFFFF);
 
   static final Color cardBg = surfaceMuted.withOpacity(0.12);
   static final Color border = surfaceMuted.withOpacity(0.25);
@@ -22,6 +24,9 @@ class NewPalette {
   static final Color textMuted = surfaceMuted.withOpacity(0.7);
 }
 
+// ---------------------------------------------------------------------------
+// PostDetailScreen
+// ---------------------------------------------------------------------------
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
   const PostDetailScreen({super.key, required this.postId});
@@ -34,6 +39,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   bool _submitting = false;
   String? _replyingToId;
   String? _replyingToPseudonym;
+  String? _commentGifUrl; // <-- NEW: GIF attached to the pending comment
 
   final Set<String> _likedComments = {};
   final Map<String, int> _likeCountOverrides = {};
@@ -50,6 +56,18 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       _replyingToId = null;
       _replyingToPseudonym = null;
     });
+  }
+
+  Future<void> _pickCommentGif() async {
+    final gif = await GiphyGet.getGif(
+      context: context,
+      apiKey: 'xgoOqu43FnGUA7Rn9PMZOFZTjLU3XUPS',
+      lang: GiphyLanguage.english,
+      tabColor: NewPalette.primary,
+    );
+    if (gif != null && gif.images?.original?.webp != null) {
+      setState(() => _commentGifUrl = gif.images!.original!.webp!);
+    }
   }
 
   Future<void> _toggleLike(WComment comment) async {
@@ -86,7 +104,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   Future<void> _submitComment() async {
     final text = _commentCtrl.text.trim();
-    if (text.isEmpty) return;
+    // Allow posting GIF-only comment (empty text is fine if GIF exists)
+    if (text.isEmpty && _commentGifUrl == null) return;
     setState(() => _submitting = true);
     try {
       final user = await ref.read(authServiceProvider).signInAnonymously();
@@ -95,15 +114,16 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             postId: widget.postId,
             content: text,
             parentId: _replyingToId,
+            gifUrl: _commentGifUrl, // <-- pass GIF
           );
       _commentCtrl.clear();
+      setState(() => _commentGifUrl = null);
       _clearReply();
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
-  // Warning Confirmation Sheet to protect against accidental deletes
   void _confirmDeletePost(BuildContext context, WPost post) {
     showDialog(
       context: context,
@@ -132,7 +152,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(ctx); // Close dialog
+              Navigator.pop(ctx);
               try {
                 await ref
                     .read(postServiceProvider)
@@ -149,8 +169,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
-                  Navigator.pop(
-                      context); // Safe back-route navigation to the feed layer
+                  Navigator.pop(context);
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -189,8 +208,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   Widget build(BuildContext context) {
     final postAsync = ref.watch(_postDetailProvider(widget.postId));
     final commentsStream = ref.watch(_commentsProvider(widget.postId));
-    final currentUserAsync =
-        ref.watch(currentUserProvider); // Monitors auth identity context
+    final currentUserAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
       backgroundColor: NewPalette.background,
@@ -223,14 +241,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               }
             },
           ),
-
-          // GATED: Render action items conditionally based on identity match parameters
           postAsync.maybeWhen(
             data: (post) {
               if (post == null) return const SizedBox.shrink();
               final currentUserId = currentUserAsync.valueOrNull?.uid;
-
-              // Only displays for the true author matching the database record
               if (currentUserId == post.authorId) {
                 return IconButton(
                   icon: const Icon(Icons.delete_outline_rounded,
@@ -238,8 +252,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   onPressed: () => _confirmDeletePost(context, post),
                 );
               }
-
-              // Displays flag layout fallback strictly for non-authors
               return IconButton(
                 icon: const Icon(Icons.flag_outlined, color: Colors.redAccent),
                 onPressed: () => showReportSheet(context, widget.postId),
@@ -409,99 +421,181 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     );
                   },
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
             ),
           ),
-          if (_replyingToPseudonym != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: NewPalette.primarySoft,
-              child: Row(
-                children: [
-                  const Icon(Icons.reply_rounded,
-                      size: 14, color: NewPalette.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Replying to $_replyingToPseudonym',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: NewPalette.primary,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Nunito'),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: _clearReply,
-                    child: const Icon(Icons.close_rounded,
-                        size: 16, color: NewPalette.primary),
-                  ),
-                ],
-              ),
-            ),
+
+          // ── Comment input bar ─────────────────────────────────────────────
           Container(
-            padding: EdgeInsets.only(
-              left: 14,
-              right: 12,
-              top: 10,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 10,
-            ),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
             decoration: BoxDecoration(
               color: NewPalette.background,
               border: Border(top: BorderSide(color: NewPalette.border)),
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentCtrl,
-                    style:
-                        const TextStyle(fontSize: 14, color: NewPalette.white),
-                    decoration: InputDecoration(
-                      hintText: _replyingToPseudonym != null
-                          ? 'Reply to $_replyingToPseudonym…'
-                          : 'Add a comment…',
-                      hintStyle: TextStyle(color: NewPalette.textMuted),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      isDense: true,
-                      filled: true,
-                      fillColor: NewPalette.cardBg,
-                      enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: NewPalette.border)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: NewPalette.primary, width: 1.5),
+                // Reply indicator
+                if (_replyingToPseudonym != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Icon(Icons.reply_rounded,
+                            size: 14, color: NewPalette.primary),
+                        const SizedBox(width: 4),
+                        Text('Replying to $_replyingToPseudonym',
+                            style: TextStyle(
+                                fontFamily: 'Nunito',
+                                fontSize: 11,
+                                color: NewPalette.primary,
+                                fontWeight: FontWeight.w700)),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: _clearReply,
+                          child: Icon(Icons.close_rounded,
+                              size: 14, color: NewPalette.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                // GIF preview above text field
+                if (_commentGifUrl != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: CachedNetworkImage(
+                            imageUrl: _commentGifUrl!,
+                            height: 100,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _commentGifUrl = null),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.black.withOpacity(0.65)),
+                              child: const Icon(Icons.close_rounded,
+                                  size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 4,
+                          left: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: NewPalette.primary),
+                            ),
+                            child: const Text('GIF',
+                                style: TextStyle(
+                                    color: NewPalette.primary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'Nunito')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Row(
+                  children: [
+                    // GIF button
+                    GestureDetector(
+                      onTap: _pickCommentGif,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: _commentGifUrl != null
+                              ? NewPalette.primarySoft
+                              : NewPalette.cardBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: _commentGifUrl != null
+                                  ? NewPalette.primary.withOpacity(0.4)
+                                  : NewPalette.border),
+                        ),
+                        child: Center(
+                          child: Text('GIF',
+                              style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: _commentGifUrl != null
+                                      ? NewPalette.primary
+                                      : NewPalette.textMuted)),
+                        ),
                       ),
                     ),
-                    maxLength: 300,
-                    buildCounter: (_,
-                            {required currentLength,
-                            required isFocused,
-                            maxLength}) =>
-                        null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _submitting ? null : _submitComment,
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
-                      color: NewPalette.primary,
-                      shape: BoxShape.circle,
+                    Expanded(
+                      child: TextField(
+                        controller: _commentCtrl,
+                        style: const TextStyle(
+                            fontSize: 14, color: NewPalette.white),
+                        decoration: InputDecoration(
+                          hintText: _replyingToPseudonym != null
+                              ? 'Reply to $_replyingToPseudonym…'
+                              : 'Add a comment…',
+                          hintStyle: TextStyle(color: NewPalette.textMuted),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          isDense: true,
+                          filled: true,
+                          fillColor: NewPalette.cardBg,
+                          enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: NewPalette.border)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                                color: NewPalette.primary, width: 1.5),
+                          ),
+                        ),
+                        maxLength: 300,
+                        buildCounter: (_,
+                                {required currentLength,
+                                required isFocused,
+                                maxLength}) =>
+                            null,
+                        onChanged: (_) => setState(() {}),
+                      ),
                     ),
-                    child: _submitting
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: NewPalette.background))
-                        : const Icon(Icons.send_rounded,
-                            color: NewPalette.background, size: 16),
-                  ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: _submitting ? null : _submitComment,
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: const BoxDecoration(
+                          color: NewPalette.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: _submitting
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: NewPalette.background))
+                            : const Icon(Icons.send_rounded,
+                                color: NewPalette.background, size: 16),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -512,6 +606,206 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _PostDetailBody  ← FIX: now renders post image / GIF
+// ---------------------------------------------------------------------------
+class _PostDetailBody extends StatelessWidget {
+  final WPost post;
+  const _PostDetailBody({required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    final commData = AppConstants.defaultCommunities.firstWhere(
+      (c) => c['name'] == post.communityName,
+      orElse: () => {'color': 0xFFBF6B3D, 'icon': '💬'},
+    );
+    final commColor = Color(commData['color'] as int);
+
+    return Container(
+      color: NewPalette.background,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(height: 4, color: commColor),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Community + timestamp badge
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: commColor.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: commColor.withOpacity(0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(commData['icon'] as String,
+                              style: const TextStyle(fontSize: 12)),
+                          const SizedBox(width: 5),
+                          Text(post.communityName,
+                              style: TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 11,
+                                  color: commColor,
+                                  fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('• ${timeago.format(post.createdAt)}',
+                        style: TextStyle(
+                            fontSize: 11, color: NewPalette.textMuted)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Author row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: commColor.withOpacity(0.5), width: 1.5)),
+                      child: WAvatar(
+                          pseudonym: post.authorPseudonym,
+                          colorIndex: post.authorColorIndex,
+                          size: 36,
+                          isPremium: post.authorIsPremium),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(post.authorPseudonym,
+                        style: const TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: NewPalette.white)),
+                    if (post.authorIsPremium) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: NewPalette.primary,
+                            borderRadius: BorderRadius.circular(6)),
+                        child: const Text('✦ PRO',
+                            style: TextStyle(
+                                fontSize: 9,
+                                color: NewPalette.background,
+                                fontWeight: FontWeight.w900)),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Post content text
+                Text(post.content,
+                    style: const TextStyle(
+                        fontSize: 15, color: NewPalette.white, height: 1.6)),
+
+                // ── FIX: Post image or GIF ─────────────────────────────────
+                if (post.imageUrl != null) ...[
+                  const SizedBox(height: 14),
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: CachedNetworkImage(
+                          imageUrl: post.imageUrl!,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              Container(height: 220, color: NewPalette.cardBg),
+                          errorWidget: (_, __, ___) => Container(
+                            height: 220,
+                            color: NewPalette.cardBg,
+                            child: Icon(Icons.broken_image_outlined,
+                                color: NewPalette.textMuted),
+                          ),
+                        ),
+                      ),
+                      // GIF badge on top-right corner
+                      if (post.isGif)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: NewPalette.primary),
+                            ),
+                            child: const Text('GIF',
+                                style: TextStyle(
+                                    color: NewPalette.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'Nunito')),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+                // ─────────────────────────────────────────────────────────────
+
+                const SizedBox(height: 16),
+                if (post.reactions.values.any((v) => v > 0)) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: AppConstants.reactions.entries.map((e) {
+                      final count = post.reactions[e.key] ?? 0;
+                      if (count == 0) return const SizedBox.shrink();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                            color: NewPalette.cardBg,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: NewPalette.border)),
+                        child: Text('${e.value} $count',
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: NewPalette.white)),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                Row(
+                  children: [
+                    Icon(Icons.chat_bubble_outline_rounded,
+                        size: 14, color: NewPalette.textMuted),
+                    const SizedBox(width: 4),
+                    Text('${post.commentCount} comments',
+                        style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 12,
+                            color: NewPalette.textMuted,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Comment node
+// ---------------------------------------------------------------------------
 class _FlatCommentItem {
   final WComment comment;
   final bool isReply;
@@ -595,14 +889,61 @@ class _RenderedCommentNode extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      comment.content,
-                      style: TextStyle(
-                        fontSize: isNestedReply ? 12.5 : 13.5,
-                        color: NewPalette.white.withOpacity(0.95),
-                        height: 1.4,
+                    // Comment text
+                    if (comment.content.isNotEmpty)
+                      Text(
+                        comment.content,
+                        style: TextStyle(
+                          fontSize: isNestedReply ? 12.5 : 13.5,
+                          color: NewPalette.white.withOpacity(0.95),
+                          height: 1.4,
+                        ),
                       ),
-                    ),
+                    // ── Comment GIF ────────────────────────────────────────
+                    if (comment.gifUrl != null) ...[
+                      const SizedBox(height: 6),
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: CachedNetworkImage(
+                              imageUrl: comment.gifUrl!,
+                              width: isNestedReply ? 160 : 200,
+                              height: isNestedReply ? 100 : 130,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(
+                                  width: 200,
+                                  height: 130,
+                                  color: NewPalette.cardBg),
+                              errorWidget: (_, __, ___) => Container(
+                                  width: 200,
+                                  height: 130,
+                                  color: NewPalette.cardBg),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 4,
+                            left: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: NewPalette.primary),
+                              ),
+                              child: const Text('GIF',
+                                  style: TextStyle(
+                                      color: NewPalette.primary,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                      fontFamily: 'Nunito')),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    // ──────────────────────────────────────────────────────
                     const SizedBox(height: 8),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -666,149 +1007,6 @@ class _RenderedCommentNode extends StatelessWidget {
         .animate()
         .fadeIn(duration: 180.ms)
         .slideY(begin: 0.02, end: 0, curve: Curves.easeOut);
-  }
-}
-
-class _PostDetailBody extends StatelessWidget {
-  final WPost post;
-  const _PostDetailBody({required this.post});
-
-  @override
-  Widget build(BuildContext context) {
-    final commData = AppConstants.defaultCommunities.firstWhere(
-      (c) => c['name'] == post.communityName,
-      orElse: () => {'color': 0xFFBF6B3D, 'icon': '💬'},
-    );
-    final commColor = Color(commData['color'] as int);
-
-    return Container(
-      color: NewPalette.background,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(height: 4, color: commColor),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: commColor.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: commColor.withOpacity(0.25)),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(commData['icon'] as String,
-                              style: const TextStyle(fontSize: 12)),
-                          const SizedBox(width: 5),
-                          Text(post.communityName,
-                              style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 11,
-                                  color: commColor,
-                                  fontWeight: FontWeight.w800)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('• ${timeago.format(post.createdAt)}',
-                        style: TextStyle(
-                            fontSize: 11, color: NewPalette.textMuted)),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: commColor.withOpacity(0.5), width: 1.5)),
-                      child: WAvatar(
-                          pseudonym: post.authorPseudonym,
-                          colorIndex: post.authorColorIndex,
-                          size: 36,
-                          isPremium: post.authorIsPremium),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(post.authorPseudonym,
-                        style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: NewPalette.white)),
-                    if (post.authorIsPremium) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                            color: NewPalette.primary,
-                            borderRadius: BorderRadius.circular(6)),
-                        child: const Text('✦ PRO',
-                            style: TextStyle(
-                                fontSize: 9,
-                                color: NewPalette.background,
-                                fontWeight: FontWeight.w900)),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(post.content,
-                    style: const TextStyle(
-                        fontSize: 15, color: NewPalette.white, height: 1.6)),
-                const SizedBox(height: 16),
-                if (post.reactions.values.any((v) => v > 0)) ...[
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: AppConstants.reactions.entries.map((e) {
-                      final count = post.reactions[e.key] ?? 0;
-                      if (count == 0) return const SizedBox.shrink();
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                            color: NewPalette.cardBg,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: NewPalette.border)),
-                        child: Text('${e.value} $count',
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: NewPalette.white)),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                Row(
-                  children: [
-                    Icon(Icons.chat_bubble_outline_rounded,
-                        size: 14, color: NewPalette.textMuted),
-                    const SizedBox(width: 4),
-                    Text('${post.commentCount} comments',
-                        style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 12,
-                            color: NewPalette.textMuted,
-                            fontWeight: FontWeight.w700)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

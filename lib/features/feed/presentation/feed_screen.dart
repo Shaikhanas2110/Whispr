@@ -464,7 +464,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Be the first to *whispr* something!',
+            'Be the first to whispr something!',
             style: TextStyle(fontSize: 13, color: NewPalette.surfaceMuted),
           ),
         ],

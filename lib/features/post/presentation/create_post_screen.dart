@@ -7,11 +7,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:giphy_get/giphy_get.dart';
 import 'package:whispr/features/community/data/community_service.dart';
 import '../../post/data/post_service.dart';
 import '../../auth/data/auth_service.dart';
 import '../../../shared/widgets/w_avatar.dart';
 
+// ---------------------------------------------------------------------------
+// Palette (unchanged)
+// ---------------------------------------------------------------------------
 class NewPalette {
   static const Color primary = Color(0xFFA7ED10);
   static const Color surfaceMuted = Color(0xFFB5B5B5);
@@ -24,6 +29,9 @@ class NewPalette {
   static final Color textMuted = surfaceMuted.withOpacity(0.7);
 }
 
+// ---------------------------------------------------------------------------
+// CreatePostScreen
+// ---------------------------------------------------------------------------
 class CreatePostScreen extends ConsumerStatefulWidget {
   final String? initialCommunityId;
 
@@ -38,6 +46,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   File? _image;
   Uint8List? _webImage;
+  String? _gifUrl; // <-- NEW: selected GIF URL
 
   late String _communityId;
   late String _communityName;
@@ -46,7 +55,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   void initState() {
     super.initState();
-
     _communityId = widget.initialCommunityId ?? 'confessions';
     _communityName = 'Confessions';
   }
@@ -61,6 +69,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     return NewPalette.textMuted;
   }
 
+  bool get _hasMedia => _image != null || _webImage != null || _gifUrl != null;
+
   Future<void> _pickImage() async {
     try {
       final picker = ImagePicker();
@@ -69,14 +79,44 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       if (xFile != null) {
         if (kIsWeb) {
           final bytes = await xFile.readAsBytes();
-          setState(() => _webImage = bytes);
+          setState(() {
+            _webImage = bytes;
+            _gifUrl = null; // clear GIF if user switches to image
+          });
         } else {
-          setState(() => _image = File(xFile.path));
+          setState(() {
+            _image = File(xFile.path);
+            _gifUrl = null;
+          });
         }
       }
     } catch (e) {
       debugPrint("IMAGE PICK ERROR: $e");
     }
+  }
+
+  Future<void> _pickGif() async {
+    final gif = await GiphyGet.getGif(
+      context: context,
+      apiKey: 'xgoOqu43FnGUA7Rn9PMZOFZTjLU3XUPS',
+      lang: GiphyLanguage.english,
+      tabColor: NewPalette.primary,
+    );
+    if (gif != null && gif.images?.original?.webp != null) {
+      setState(() {
+        _gifUrl = gif.images!.original!.webp!;
+        _image = null;
+        _webImage = null;
+      });
+    }
+  }
+
+  void _clearMedia() {
+    setState(() {
+      _image = null;
+      _webImage = null;
+      _gifUrl = null;
+    });
   }
 
   Future<void> _post() async {
@@ -91,6 +131,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             communityName: _communityName,
             imageFile: _image,
             webImage: _webImage,
+            gifUrl: _gifUrl, // <-- pass GIF URL through
           );
       if (mounted) {
         context.pop();
@@ -124,8 +165,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
-    final canPost = !_posting &&
-        (_ctrl.text.trim().isNotEmpty || _image != null || _webImage != null);
+    final canPost = !_posting && (_ctrl.text.trim().isNotEmpty || _hasMedia);
 
     return Scaffold(
       backgroundColor: NewPalette.background,
@@ -338,30 +378,67 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         contentPadding: const EdgeInsets.all(16),
                       ),
                     ),
-                    if (_image != null || _webImage != null) ...[
+
+                    // ── Media preview (image OR gif) ──────────────────────
+                    if (_hasMedia) ...[
                       const SizedBox(height: 12),
                       Stack(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: kIsWeb
-                                ? Image.memory(_webImage!,
+                            child: _gifUrl != null
+                                // GIF from Tenor — render with CachedNetworkImage
+                                ? CachedNetworkImage(
+                                    imageUrl: _gifUrl!,
                                     width: double.infinity,
                                     height: 200,
-                                    fit: BoxFit.cover)
-                                : Image.file(_image!,
-                                    width: double.infinity,
-                                    height: 200,
-                                    fit: BoxFit.cover),
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => Container(
+                                        height: 200,
+                                        color: NewPalette.cardBg,
+                                        child: const Center(
+                                            child: CircularProgressIndicator(
+                                                color: NewPalette.primary))),
+                                    errorWidget: (_, __, ___) => Container(
+                                        height: 200, color: NewPalette.cardBg),
+                                  )
+                                : kIsWeb
+                                    ? Image.memory(_webImage!,
+                                        width: double.infinity,
+                                        height: 200,
+                                        fit: BoxFit.cover)
+                                    : Image.file(_image!,
+                                        width: double.infinity,
+                                        height: 200,
+                                        fit: BoxFit.cover),
                           ),
+                          // GIF badge
+                          if (_gifUrl != null)
+                            Positioned(
+                              bottom: 8,
+                              left: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: NewPalette.primary),
+                                ),
+                                child: const Text('GIF',
+                                    style: TextStyle(
+                                        color: NewPalette.primary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        fontFamily: 'Nunito')),
+                              ),
+                            ),
+                          // Remove button
                           Positioned(
                             top: 8,
                             right: 8,
                             child: GestureDetector(
-                              onTap: () => setState(() {
-                                _image = null;
-                                _webImage = null;
-                              }),
+                              onTap: _clearMedia,
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
@@ -376,6 +453,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         ],
                       ),
                     ],
+
                     const SizedBox(height: 24),
                     const Text(
                       'Choose community',
@@ -400,7 +478,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                     color: Colors.redAccent, fontSize: 12)),
                           ),
                           data: (liveCommunities) {
-                            // Sync community name from live communities
                             final selectedCommunity = liveCommunities.where(
                               (c) => c['id'] == _communityId,
                             );
@@ -482,6 +559,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 ),
               ),
             ),
+
+            // ── Bottom toolbar ────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -491,6 +570,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               child: Row(
                 children: [
                   _ToolBtn(emoji: '🖼️', label: 'Image', onTap: _pickImage),
+                  const SizedBox(width: 8),
+                  _ToolBtn(emoji: '🎞️', label: 'GIF', onTap: _pickGif), // NEW
                   const SizedBox(width: 8),
                   _ToolBtn(emoji: '#️⃣', label: 'Hashtag', onTap: () {}),
                   const Spacer(),

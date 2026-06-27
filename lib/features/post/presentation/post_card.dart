@@ -192,26 +192,50 @@ class _PostCardState extends ConsumerState<PostCard> {
               ),
             ),
 
-            // Content Image Frame
+            // Content Image Frame (supports both static images and GIFs)
             if (_post.imageUrl != null)
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: CachedNetworkImage(
-                    imageUrl: _post.imageUrl!,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) =>
-                        Container(height: 180, color: NewPalette.buttonBg),
-                    errorWidget: (_, __, ___) => Container(
-                      height: 180,
-                      color: NewPalette.buttonBg,
-                      child: Icon(Icons.broken_image_outlined,
-                          color: NewPalette.textMuted),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: CachedNetworkImage(
+                        imageUrl: _post.imageUrl!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) =>
+                            Container(height: 180, color: NewPalette.buttonBg),
+                        errorWidget: (_, __, ___) => Container(
+                          height: 180,
+                          color: NewPalette.buttonBg,
+                          child: Icon(Icons.broken_image_outlined,
+                              color: NewPalette.textMuted),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (_post.isGif)
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: NewPalette.primary),
+                          ),
+                          child: const Text('GIF',
+                              style: TextStyle(
+                                  color: NewPalette.primary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  fontFamily: 'Nunito')),
+                        ),
+                      ),
+                  ],
                 ),
               ),
 

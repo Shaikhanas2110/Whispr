@@ -5,9 +5,8 @@ import '../../../app/constants.dart';
 
 enum FeedType { trending, newest, forYou }
 
-// ── Real-time first page via snapshots ────────────────────
-// Gives instant updates when new posts are created.
-final feedStreamProvider = StreamProvider.family<List<WPost>, FeedType>((ref, type) {
+final feedStreamProvider =
+    StreamProvider.family<List<WPost>, FeedType>((ref, type) {
   final db = FirebaseFirestore.instance;
   Query<Map<String, dynamic>> q = db
       .collection(AppConstants.postsCollection)
@@ -16,7 +15,9 @@ final feedStreamProvider = StreamProvider.family<List<WPost>, FeedType>((ref, ty
 
   switch (type) {
     case FeedType.trending:
-      q = q.orderBy('trendScore', descending: true).orderBy('createdAt', descending: true);
+      q = q
+          .orderBy('trendScore', descending: true)
+          .orderBy('createdAt', descending: true);
       break;
     case FeedType.newest:
     case FeedType.forYou:
@@ -24,13 +25,14 @@ final feedStreamProvider = StreamProvider.family<List<WPost>, FeedType>((ref, ty
       break;
   }
 
-  return q.snapshots().map((snap) =>
-      snap.docs.map((d) => WPost.fromFirestore(d)).toList());
+  return q
+      .snapshots()
+      .map((snap) => snap.docs.map((d) => WPost.fromFirestore(d)).toList());
 });
 
 // ── Pagination state (load-more pages beyond page 1) ──────
 class FeedState {
-  final List<WPost> extra;      // posts beyond the live first page
+  final List<WPost> extra;
   final bool isLoadingMore;
   final bool hasMore;
   final DocumentSnapshot? lastDoc;
@@ -42,7 +44,11 @@ class FeedState {
     this.lastDoc,
   });
 
-  FeedState copyWith({List<WPost>? extra, bool? isLoadingMore, bool? hasMore, DocumentSnapshot? lastDoc}) =>
+  FeedState copyWith(
+          {List<WPost>? extra,
+          bool? isLoadingMore,
+          bool? hasMore,
+          DocumentSnapshot? lastDoc}) =>
       FeedState(
         extra: extra ?? this.extra,
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
@@ -74,7 +80,9 @@ class FeedPaginationNotifier extends StateNotifier<FeedState> {
 
       switch (feedType) {
         case FeedType.trending:
-          q = q.orderBy('trendScore', descending: true).orderBy('createdAt', descending: true);
+          q = q
+              .orderBy('trendScore', descending: true)
+              .orderBy('createdAt', descending: true);
           break;
         case FeedType.newest:
         case FeedType.forYou:

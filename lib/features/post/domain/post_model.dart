@@ -8,15 +8,16 @@ class WPost {
   final bool authorIsPremium;
   final String content;
   final String? imageUrl;
+  final bool isGif; // <-- NEW: true when imageUrl points to a Tenor GIF
   final String communityId;
   final String communityName;
   final Map<String, int> reactions;
   final int commentCount;
-  final int likeCount; // Track total likes for the post
+  final int likeCount;
   final double trendScore;
   final String status; // active | removed | under_review
   final DateTime createdAt;
-  final String? myReaction; // current user's reaction
+  final String? myReaction;
 
   const WPost({
     required this.id,
@@ -26,11 +27,12 @@ class WPost {
     this.authorIsPremium = false,
     required this.content,
     this.imageUrl,
+    this.isGif = false,
     required this.communityId,
     required this.communityName,
     this.reactions = const {},
     this.commentCount = 0,
-    this.likeCount = 0, // Defaults to zero likes
+    this.likeCount = 0,
     this.trendScore = 0,
     this.status = 'active',
     required this.createdAt,
@@ -49,12 +51,12 @@ class WPost {
       authorIsPremium: d['authorIsPremium'] ?? false,
       content: d['content'] ?? '',
       imageUrl: d['imageUrl'],
+      isGif: d['isGif'] ?? false,
       communityId: d['communityId'] ?? '',
       communityName: d['communityName'] ?? '',
       reactions: Map<String, int>.from(d['reactions'] ?? {}),
       commentCount: d['commentCount'] ?? 0,
-      likeCount:
-          d['likeCount'] ?? 0, // Parse securely from document schema maps
+      likeCount: d['likeCount'] ?? 0,
       trendScore: (d['trendScore'] ?? 0).toDouble(),
       status: d['status'] ?? 'active',
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -69,12 +71,12 @@ class WPost {
         'authorIsPremium': authorIsPremium,
         'content': content,
         'imageUrl': imageUrl,
+        'isGif': isGif,
         'communityId': communityId,
         'communityName': communityName,
         'reactions': reactions,
         'commentCount': commentCount,
-        'likeCount':
-            likeCount, // Persists updates securely down to remote document instances
+        'likeCount': likeCount,
         'trendScore': trendScore,
         'status': status,
         'createdAt': Timestamp.fromDate(createdAt),
@@ -84,8 +86,7 @@ class WPost {
     String? myReaction,
     Map<String, int>? reactions,
     int? commentCount,
-    int?
-        likeCount, // Included in state transitions to support fluid UI switches
+    int? likeCount,
   }) =>
       WPost(
         id: id,
@@ -95,12 +96,12 @@ class WPost {
         authorIsPremium: authorIsPremium,
         content: content,
         imageUrl: imageUrl,
+        isGif: isGif,
         communityId: communityId,
         communityName: communityName,
         reactions: reactions ?? this.reactions,
         commentCount: commentCount ?? this.commentCount,
-        likeCount:
-            likeCount ?? this.likeCount, // Seamless data preservation fallbacks
+        likeCount: likeCount ?? this.likeCount,
         trendScore: trendScore,
         status: status,
         createdAt: createdAt,
@@ -116,6 +117,8 @@ class WComment {
   final int authorColorIndex;
   final String content;
   final String? parentId;
+  final String? gifUrl; // <-- NEW: optional GIF attached to comment
+  final bool isGif;
   final int likeCount;
   final bool isLiked;
   final DateTime createdAt;
@@ -128,6 +131,8 @@ class WComment {
     required this.authorColorIndex,
     required this.content,
     this.parentId,
+    this.gifUrl,
+    this.isGif = false,
     this.likeCount = 0,
     this.isLiked = false,
     required this.createdAt,
@@ -143,6 +148,8 @@ class WComment {
       authorColorIndex: d['authorColorIndex'] ?? 0,
       content: d['content'] ?? '',
       parentId: d['parentId'],
+      gifUrl: d['gifUrl'],
+      isGif: d['isGif'] ?? false,
       likeCount: d['likeCount'] ?? 0,
       isLiked: isLiked,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
