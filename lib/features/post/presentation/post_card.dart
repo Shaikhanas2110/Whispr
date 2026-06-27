@@ -38,6 +38,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   late WPost _post;
   bool _isLiked = false;
   int _likeCount = 0;
+  bool _isProcessingLike = false;
 
   @override
   void initState() {
@@ -65,9 +66,14 @@ class _PostCardState extends ConsumerState<PostCard> {
     }
   }
 
-  // Handles fast, lag-free state updates locally before committing down to database networks
   Future<void> _toggleLike() async {
+    // 1. Prevent execution if a network call is already in progress
+    if (_isProcessingLike) return;
+
     setState(() {
+      _isProcessingLike = true; // Lock the button
+
+      // Optimistic UI update
       if (_isLiked) {
         _isLiked = false;
         _likeCount = max(0, _likeCount - 1);
@@ -82,15 +88,24 @@ class _PostCardState extends ConsumerState<PostCard> {
       await ref.read(postServiceProvider).likePost(_post.id);
     } catch (e) {
       // Fallback rollback safety handler if net configurations drop out
-      setState(() {
-        if (_isLiked) {
-          _isLiked = false;
-          _likeCount = max(0, _likeCount - 1);
-        } else {
-          _isLiked = true;
-          _likeCount += 1;
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_isLiked) {
+            _isLiked = false;
+            _likeCount = max(0, _likeCount - 1);
+          } else {
+            _isLiked = true;
+            _likeCount += 1;
+          }
+        });
+      }
+    } finally {
+      // 2. Release the lock whether the call succeeded or failed
+      if (mounted) {
+        setState(() {
+          _isProcessingLike = false;
+        });
+      }
     }
   }
 
