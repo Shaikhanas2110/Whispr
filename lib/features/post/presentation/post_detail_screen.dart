@@ -39,7 +39,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   bool _submitting = false;
   String? _replyingToId;
   String? _replyingToPseudonym;
-  String? _commentGifUrl; // <-- NEW: GIF attached to the pending comment
+  String? _commentGifUrl;
+  bool _isProcessingLike = false;
 
   final Set<String> _likedComments = {};
   final Map<String, int> _likeCountOverrides = {};
@@ -71,8 +72,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   Future<void> _toggleLike(WComment comment) async {
+    if (_isProcessingLike) return;
+
     final alreadyLiked = _likedComments.contains(comment.id);
     setState(() {
+      _isProcessingLike = true; // Lock the button
+
       if (alreadyLiked) {
         _likedComments.remove(comment.id);
         final rawCount =
@@ -99,6 +104,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           _likeCountOverrides[comment.id] = rawCount.clamp(0, 999999);
         }
       });
+    } finally {
+      // 2. Release the lock whether the call succeeded or failed
+      if (mounted) {
+        setState(() {
+          _isProcessingLike = false;
+        });
+      }
     }
   }
 
@@ -606,9 +618,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _PostDetailBody  ← FIX: now renders post image / GIF
-// ---------------------------------------------------------------------------
 class _PostDetailBody extends StatelessWidget {
   final WPost post;
   const _PostDetailBody({required this.post});
@@ -803,9 +812,6 @@ class _PostDetailBody extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Comment node
-// ---------------------------------------------------------------------------
 class _FlatCommentItem {
   final WComment comment;
   final bool isReply;
