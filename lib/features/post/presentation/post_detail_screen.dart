@@ -993,7 +993,7 @@ class _RenderedCommentNode extends StatelessWidget {
                     isLiked
                         ? Icons.favorite_rounded
                         : Icons.favorite_border_rounded,
-                    size: 13.5,
+                    size: 15.5,
                     color: isLiked ? Colors.redAccent : NewPalette.textMuted,
                   ),
                 ),
