@@ -8,6 +8,7 @@ import '../../post/data/post_service.dart';
 import '../../post/domain/post_model.dart';
 import '../../auth/data/auth_service.dart';
 import '../../moderation/presentation/report_sheet.dart';
+import '../presentation/post_video_player.dart';
 import '../../../shared/widgets/w_avatar.dart';
 import '../../../app/constants.dart';
 import 'package:share_plus/share_plus.dart';
@@ -717,6 +718,12 @@ class _PostDetailBody extends StatelessWidget {
                 Text(post.content,
                     style: const TextStyle(
                         fontSize: 15, color: NewPalette.white, height: 1.6)),
+
+                // ── Post video ──────────────────────────────────────────────
+                if (post.hasVideo) ...[
+                  const SizedBox(height: 14),
+                  PostVideoPlayer(videoUrl: post.videoUrl!, height: 240),
+                ],
 
                 // ── FIX: Post image or GIF ─────────────────────────────────
                 if (post.imageUrl != null) ...[

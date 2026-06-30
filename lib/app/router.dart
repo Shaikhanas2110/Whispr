@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:whispr/features/sparks/presentation/sparks_screen.dart';
 import '../features/auth/presentation/splash_screen.dart';
 import '../features/auth/presentation/onboarding_screen.dart';
 import '../features/feed/presentation/home_shell.dart';
@@ -44,6 +45,10 @@ final routerProvider = Provider<GoRouter>((ref) => GoRouter(
           builder: (_, s) =>
               CommunityDetailScreen(communityId: s.pathParameters['id']!),
         ),
+        GoRoute(
+            path: '/reels',
+            parentNavigatorKey: _rootKey,
+            builder: (_, __) => const ReelsScreen()),
         GoRoute(
           path: '/search',
           parentNavigatorKey: _rootKey,

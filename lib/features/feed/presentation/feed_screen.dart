@@ -232,6 +232,20 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                         color: NewPalette.white, size: 20),
                   ),
                 ),
+                GestureDetector(
+                  onTap: () => context.push('/create'),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 14),
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: NewPalette.cardBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: NewPalette.border),
+                    ),
+                    child: const Icon(Icons.add,
+                        color: NewPalette.white, size: 20),
+                  ),
+                ),
               ],
             ),
 
@@ -362,7 +376,13 @@ class _FeedListState extends ConsumerState<_FeedList>
           child: Text('Error: $e',
               style: const TextStyle(color: Colors.redAccent))),
       data: (livePosts) {
-        final all = [...livePosts, ...pagination.extra];
+        // Defensive filter: video posts must never appear in the feed, only
+        // in Reels — regardless of what the underlying stream/provider
+        // returns. This guards against any upstream query (e.g. inside
+        // feed_provider.dart) that hasn't been updated to exclude them.
+        final all = [...livePosts, ...pagination.extra]
+            .where((p) => !p.hasVideo)
+            .toList();
         if (all.isEmpty) return const _EmptyState();
 
         return RefreshIndicator(

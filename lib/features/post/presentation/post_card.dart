@@ -10,6 +10,7 @@ import '../data/post_service.dart';
 import '../../moderation/presentation/report_sheet.dart';
 import '../../../shared/widgets/w_avatar.dart';
 import '../../../shared/widgets/hashtag_text.dart';
+import '../presentation/post_video_player.dart';
 
 class NewPalette {
   static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
@@ -205,6 +206,14 @@ class _PostCardState extends ConsumerState<PostCard> {
                 ],
               ),
             ),
+
+            // Content Video Frame
+            if (_post.hasVideo)
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: PostVideoPlayer(videoUrl: _post.videoUrl!),
+              ),
 
             // Content Image Frame (supports both static images and GIFs)
             if (_post.imageUrl != null)

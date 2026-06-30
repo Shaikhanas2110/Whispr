@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:giphy_get/giphy_get.dart';
+import 'package:video_player/video_player.dart';
 import 'package:whispr/features/community/data/community_service.dart';
 import '../../post/data/post_service.dart';
 import '../../auth/data/auth_service.dart';
@@ -47,10 +48,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   File? _image;
   Uint8List? _webImage;
   String? _gifUrl; // <-- NEW: selected GIF URL
+  File? _video; // <-- NEW: selected video file
+  Uint8List? _webVideo; // <-- NEW: selected video bytes on web
+  VideoPlayerController? _videoPreviewCtrl;
 
   late String _communityId;
   late String _communityName;
   bool _posting = false;
+  double? _videoProgress; // 0.0–1.0 while compressing/uploading a video
 
   @override
   void initState() {
@@ -69,7 +74,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     return NewPalette.textMuted;
   }
 
-  bool get _hasMedia => _image != null || _webImage != null || _gifUrl != null;
+  bool get _hasMedia =>
+      _image != null ||
+      _webImage != null ||
+      _gifUrl != null ||
+      _video != null ||
+      _webVideo != null;
 
   Future<void> _pickImage() async {
     try {
@@ -77,21 +87,82 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       final xFile =
           await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
       if (xFile != null) {
+        await _disposeVideoPreview();
         if (kIsWeb) {
           final bytes = await xFile.readAsBytes();
           setState(() {
             _webImage = bytes;
             _gifUrl = null; // clear GIF if user switches to image
+            _video = null;
+            _webVideo = null;
           });
         } else {
           setState(() {
             _image = File(xFile.path);
             _gifUrl = null;
+            _video = null;
+            _webVideo = null;
           });
         }
       }
     } catch (e) {
       debugPrint("IMAGE PICK ERROR: $e");
+    }
+  }
+
+  Future<void> _disposeVideoPreview() async {
+    final old = _videoPreviewCtrl;
+    _videoPreviewCtrl = null;
+    await old?.dispose();
+  }
+
+  Future<void> _pickVideo() async {
+    try {
+      final picker = ImagePicker();
+      final xFile = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 60),
+      );
+      if (xFile == null) return;
+
+      await _disposeVideoPreview();
+
+      if (kIsWeb) {
+        final bytes = await xFile.readAsBytes();
+        final ctrl = VideoPlayerController.networkUrl(Uri.parse(xFile.path));
+        await ctrl.initialize();
+        ctrl.setLooping(true);
+        ctrl.play();
+        setState(() {
+          _webVideo = bytes;
+          _video = null;
+          _image = null;
+          _webImage = null;
+          _gifUrl = null;
+          _videoPreviewCtrl = ctrl;
+        });
+      } else {
+        final file = File(xFile.path);
+        final ctrl = VideoPlayerController.file(file);
+        await ctrl.initialize();
+        ctrl.setLooping(true);
+        ctrl.play();
+        setState(() {
+          _video = file;
+          _webVideo = null;
+          _image = null;
+          _webImage = null;
+          _gifUrl = null;
+          _videoPreviewCtrl = ctrl;
+        });
+      }
+    } catch (e) {
+      debugPrint("VIDEO PICK ERROR: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Could not load video: $e'),
+            backgroundColor: Colors.redAccent),
+      );
     }
   }
 
@@ -103,25 +174,34 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       tabColor: NewPalette.primary,
     );
     if (gif != null && gif.images?.original?.webp != null) {
+      await _disposeVideoPreview();
       setState(() {
         _gifUrl = gif.images!.original!.webp!;
         _image = null;
         _webImage = null;
+        _video = null;
+        _webVideo = null;
       });
     }
   }
 
   void _clearMedia() {
+    _disposeVideoPreview();
     setState(() {
       _image = null;
       _webImage = null;
       _gifUrl = null;
+      _video = null;
+      _webVideo = null;
     });
   }
 
   Future<void> _post() async {
     final text = _ctrl.text.trim();
-    setState(() => _posting = true);
+    setState(() {
+      _posting = true;
+      _videoProgress = (_video != null || _webVideo != null) ? 0.0 : null;
+    });
     try {
       final user = await ref.read(authServiceProvider).signInAnonymously();
       await ref.read(postServiceProvider).createPost(
@@ -132,6 +212,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             imageFile: _image,
             webImage: _webImage,
             gifUrl: _gifUrl, // <-- pass GIF URL through
+            videoFile: _video,
+            webVideo: _webVideo,
+            onVideoProgress: (p) {
+              if (mounted) setState(() => _videoProgress = p);
+            },
           );
       if (mounted) {
         context.pop();
@@ -152,7 +237,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         );
       }
     } catch (e) {
-      setState(() => _posting = false);
+      setState(() {
+        _posting = false;
+        _videoProgress = null;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -245,14 +333,43 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   ),
                 ),
                 child: _posting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: NewPalette.background,
-                        ),
-                      )
+                    ? (_videoProgress != null
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value: _videoProgress! > 0
+                                      ? _videoProgress
+                                      : null,
+                                  color: NewPalette.background,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _videoProgress! < 1.0
+                                    ? '${(_videoProgress! * 100).clamp(0, 99).toStringAsFixed(0)}%'
+                                    : 'Posting',
+                                style: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  color: NewPalette.background,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          )
+                        : const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: NewPalette.background,
+                            ),
+                          ))
                     : Text(
                         'Whispr',
                         style: TextStyle(
@@ -379,38 +496,69 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                     ),
 
-                    // ── Media preview (image OR gif) ──────────────────────
+                    // ── Media preview (image OR gif OR video) ─────────────
                     if (_hasMedia) ...[
                       const SizedBox(height: 12),
                       Stack(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: _gifUrl != null
-                                // GIF from Tenor — render with CachedNetworkImage
-                                ? CachedNetworkImage(
-                                    imageUrl: _gifUrl!,
+                            child: (_video != null || _webVideo != null)
+                                // Local video — preview with VideoPlayer
+                                ? SizedBox(
                                     width: double.infinity,
                                     height: 200,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(
-                                        height: 200,
-                                        color: NewPalette.cardBg,
-                                        child: const Center(
-                                            child: CircularProgressIndicator(
-                                                color: NewPalette.primary))),
-                                    errorWidget: (_, __, ___) => Container(
-                                        height: 200, color: NewPalette.cardBg),
+                                    child: (_videoPreviewCtrl != null &&
+                                            _videoPreviewCtrl!
+                                                .value.isInitialized)
+                                        ? FittedBox(
+                                            fit: BoxFit.cover,
+                                            child: SizedBox(
+                                              width: _videoPreviewCtrl!
+                                                  .value.size.width,
+                                              height: _videoPreviewCtrl!
+                                                  .value.size.height,
+                                              child: VideoPlayer(
+                                                  _videoPreviewCtrl!),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: NewPalette.cardBg,
+                                            child: const Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        color: NewPalette
+                                                            .primary)),
+                                          ),
                                   )
-                                : kIsWeb
-                                    ? Image.memory(_webImage!,
+                                : _gifUrl != null
+                                    // GIF from Tenor — render with CachedNetworkImage
+                                    ? CachedNetworkImage(
+                                        imageUrl: _gifUrl!,
                                         width: double.infinity,
                                         height: 200,
-                                        fit: BoxFit.cover)
-                                    : Image.file(_image!,
-                                        width: double.infinity,
-                                        height: 200,
-                                        fit: BoxFit.cover),
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, __) => Container(
+                                            height: 200,
+                                            color: NewPalette.cardBg,
+                                            child: const Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        color: NewPalette
+                                                            .primary))),
+                                        errorWidget: (_, __, ___) => Container(
+                                            height: 200,
+                                            color: NewPalette.cardBg),
+                                      )
+                                    : kIsWeb
+                                        ? Image.memory(_webImage!,
+                                            width: double.infinity,
+                                            height: 200,
+                                            fit: BoxFit.cover)
+                                        : Image.file(_image!,
+                                            width: double.infinity,
+                                            height: 200,
+                                            fit: BoxFit.cover),
                           ),
                           // GIF badge
                           if (_gifUrl != null)
@@ -431,6 +579,34 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                         fontSize: 10,
                                         fontWeight: FontWeight.w900,
                                         fontFamily: 'Nunito')),
+                              ),
+                            ),
+                          // Video badge
+                          if (_video != null || _webVideo != null)
+                            Positioned(
+                              bottom: 8,
+                              left: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: NewPalette.primary),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.play_arrow_rounded,
+                                        size: 12, color: NewPalette.primary),
+                                    Text('VIDEO',
+                                        style: TextStyle(
+                                            color: NewPalette.primary,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                            fontFamily: 'Nunito')),
+                                  ],
+                                ),
                               ),
                             ),
                           // Remove button
@@ -571,9 +747,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 children: [
                   _ToolBtn(emoji: '🖼️', label: 'Image', onTap: _pickImage),
                   const SizedBox(width: 8),
-                  _ToolBtn(emoji: '🎞️', label: 'GIF', onTap: _pickGif), // NEW
+                  _ToolBtn(
+                      emoji: '🎬', label: 'Video', onTap: _pickVideo), // NEW
                   const SizedBox(width: 8),
-                  _ToolBtn(emoji: '#️⃣', label: 'Hashtag', onTap: () {}),
+                  _ToolBtn(emoji: '🎞️', label: 'GIF', onTap: _pickGif), // NEW
+
                   const Spacer(),
                   SizedBox(
                     width: 36,
@@ -613,6 +791,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   void dispose() {
     _ctrl.dispose();
+    _videoPreviewCtrl?.dispose();
     super.dispose();
   }
 }

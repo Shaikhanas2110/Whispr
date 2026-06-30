@@ -9,6 +9,7 @@ class WPost {
   final String content;
   final String? imageUrl;
   final bool isGif; // <-- NEW: true when imageUrl points to a Tenor GIF
+  final String? videoUrl; // <-- NEW: set when the post contains a video
   final String communityId;
   final String communityName;
   final Map<String, int> reactions;
@@ -28,6 +29,7 @@ class WPost {
     required this.content,
     this.imageUrl,
     this.isGif = false,
+    this.videoUrl,
     required this.communityId,
     required this.communityName,
     this.reactions = const {},
@@ -41,6 +43,8 @@ class WPost {
 
   int get totalReactions => reactions.values.fold(0, (a, b) => a + b);
 
+  bool get hasVideo => videoUrl != null && videoUrl!.isNotEmpty;
+
   factory WPost.fromFirestore(DocumentSnapshot doc, {String? myReaction}) {
     final d = doc.data() as Map<String, dynamic>;
     return WPost(
@@ -52,6 +56,7 @@ class WPost {
       content: d['content'] ?? '',
       imageUrl: d['imageUrl'],
       isGif: d['isGif'] ?? false,
+      videoUrl: d['videoUrl'],
       communityId: d['communityId'] ?? '',
       communityName: d['communityName'] ?? '',
       reactions: Map<String, int>.from(d['reactions'] ?? {}),
@@ -72,6 +77,8 @@ class WPost {
         'content': content,
         'imageUrl': imageUrl,
         'isGif': isGif,
+        'videoUrl': videoUrl,
+        'hasVideo': hasVideo,
         'communityId': communityId,
         'communityName': communityName,
         'reactions': reactions,
@@ -97,6 +104,7 @@ class WPost {
         content: content,
         imageUrl: imageUrl,
         isGif: isGif,
+        videoUrl: videoUrl,
         communityId: communityId,
         communityName: communityName,
         reactions: reactions ?? this.reactions,

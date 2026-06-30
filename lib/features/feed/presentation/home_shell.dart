@@ -22,8 +22,9 @@ class HomeShell extends ConsumerWidget {
 
   int _locationIndex(String location) {
     if (location.startsWith('/communities')) return 1;
-    if (location.startsWith('/notifications')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/reels')) return 2;
+    if (location.startsWith('/notifications')) return 3;
+    if (location.startsWith('/profile')) return 4;
     return 0;
   }
 
@@ -36,47 +37,8 @@ class HomeShell extends ConsumerWidget {
     return Scaffold(
       backgroundColor: NewPalette.background,
       body: child,
-      floatingActionButton: const _ComposeButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _BottomBar(currentIndex: idx, unreadCount: unread),
-    );
-  }
-}
-
-class _ComposeButton extends StatelessWidget {
-  const _ComposeButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/create'),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: NewPalette.primary,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: NewPalette.primary.withOpacity(0.35),
-              blurRadius: 20,
-              spreadRadius: 2,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const ClipRRect(
-          borderRadius: BorderRadius.all(Radius.circular(30)),
-          child: RiveAnimation.asset(
-            'assets/images/add.riv',
-            fit: BoxFit.cover,
-            placeHolder: Center(
-              child: Icon(Icons.add_rounded,
-                  color: NewPalette.background, size: 28),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -121,12 +83,19 @@ class _BottomBar extends StatelessWidget {
                 current: currentIndex,
                 onTap: () => context.go('/communities'),
               ),
-              const SizedBox(width: 64), // FAB gap
+              _NavItem(
+                icon: Icons.play_circle_fill_rounded,
+                inactiveIcon: Icons.play_circle_outline_rounded,
+                label: 'Sparks',
+                index: 2,
+                current: currentIndex,
+                onTap: () => context.push('/reels'),
+              ),
               _NavItem(
                 icon: Icons.notifications_rounded,
                 inactiveIcon: Icons.notifications_outlined,
                 label: 'Alerts',
-                index: 2,
+                index: 3,
                 current: currentIndex,
                 onTap: () => context.go('/notifications'),
                 badge: unreadCount,
@@ -135,7 +104,7 @@ class _BottomBar extends StatelessWidget {
                 icon: Icons.person_rounded,
                 inactiveIcon: Icons.person_outlined,
                 label: 'Profile',
-                index: 3,
+                index: 4,
                 current: currentIndex,
                 onTap: () => context.go('/profile'),
               ),

@@ -2,7 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:video_compress/video_compress.dart';
 import '../domain/post_model.dart';
 import '../../auth/domain/user_model.dart';
 import '../../../app/constants.dart';
@@ -11,6 +13,14 @@ import 'package:http/http.dart' as http;
 
 final postServiceProvider = Provider<PostService>((ref) => PostService());
 
+/// Result of a paginated video-posts query — bundles the posts with the
+/// Firestore cursor doc needed to fetch the next page.
+class VideoPostsPage {
+  final List<WPost> posts;
+  final DocumentSnapshot? lastDoc;
+  const VideoPostsPage({required this.posts, this.lastDoc});
+}
+
 class PostService {
   final _db = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
@@ -18,10 +28,13 @@ class PostService {
   String? get _uid => _auth.currentUser?.uid;
 
   // ── Fetch feeds ──────────────────────────────────────────────────────────
+  // Note: all three exclude video posts (hasVideo == false) — videos only
+  // ever surface in the Reels tab via fetchVideoPosts() below.
   Future<List<WPost>> fetchTrendingPosts({DocumentSnapshot? lastDoc}) async {
     var q = _db
         .collection(AppConstants.postsCollection)
         .where('status', isEqualTo: 'active')
+        .where('hasVideo', isEqualTo: false)
         .orderBy('trendScore', descending: true)
         .orderBy('createdAt', descending: true)
         .limit(AppConstants.postsPerPage);
@@ -30,10 +43,23 @@ class PostService {
     return _enrichPosts(snap.docs);
   }
 
+  Stream<List<WPost>> streamVideoPosts(
+      {int limit = AppConstants.postsPerPage}) {
+    return _db
+        .collection(AppConstants.postsCollection)
+        .where('status', isEqualTo: 'active')
+        .where('hasVideo', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .asyncMap((snap) => _enrichPosts(snap.docs));
+  }
+
   Future<List<WPost>> fetchNewPosts({DocumentSnapshot? lastDoc}) async {
     var q = _db
         .collection(AppConstants.postsCollection)
         .where('status', isEqualTo: 'active')
+        .where('hasVideo', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .limit(AppConstants.postsPerPage);
     if (lastDoc != null) q = q.startAfterDocument(lastDoc);
@@ -47,11 +73,29 @@ class PostService {
         .collection(AppConstants.postsCollection)
         .where('status', isEqualTo: 'active')
         .where('communityId', isEqualTo: communityId)
+        .where('hasVideo', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .limit(AppConstants.postsPerPage);
     if (lastDoc != null) q = q.startAfterDocument(lastDoc);
     final snap = await q.get();
     return _enrichPosts(snap.docs);
+  }
+
+  // ── Reels feed (video-only posts) ──────────────────────────────────────
+  Future<VideoPostsPage> fetchVideoPosts({DocumentSnapshot? lastDoc}) async {
+    var q = _db
+        .collection(AppConstants.postsCollection)
+        .where('status', isEqualTo: 'active')
+        .where('hasVideo', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .limit(AppConstants.postsPerPage);
+    if (lastDoc != null) q = q.startAfterDocument(lastDoc);
+    final snap = await q.get();
+    final posts = await _enrichPosts(snap.docs);
+    return VideoPostsPage(
+      posts: posts,
+      lastDoc: snap.docs.isNotEmpty ? snap.docs.last : null,
+    );
   }
 
   Future<List<WPost>> _enrichPosts(List<DocumentSnapshot> docs) async {
@@ -112,6 +156,76 @@ class PostService {
     }
   }
 
+  // ── Cloudinary video upload ───────────────────────────────────────────────
+  Future<String?> _uploadVideo({
+    File? file,
+    Uint8List? webVideo,
+    required String uid,
+    void Function(double progress)? onProgress,
+  }) async {
+    File? uploadFile = file;
+    try {
+      // Compress local video files before upload (mobile/desktop only —
+      // video_compress has no web implementation, so web bytes go through
+      // as-is). This is what cuts the long "uploading…" wait down.
+      if (uploadFile != null && !kIsWeb) {
+        try {
+          final subscription = VideoCompress.compressProgress$.subscribe((p) {
+            onProgress?.call((p / 100).clamp(0.0, 1.0));
+          });
+          final info = await VideoCompress.compressVideo(
+            uploadFile.path,
+            quality: VideoQuality.LowQuality,
+            frameRate: 24,
+            deleteOrigin: false,
+            includeAudio: true,
+          );
+          subscription.unsubscribe();
+          if (info != null && info.file != null) {
+            uploadFile = info.file;
+          }
+        } catch (e) {
+          // If compression fails for any reason, fall back to the original
+          // file rather than blocking the whole post.
+          print("VIDEO COMPRESS ERROR: $e");
+        }
+      }
+
+      final uri =
+          Uri.parse("https://api.cloudinary.com/v1_1/dcfsy3pdj/video/upload");
+
+      var request = http.MultipartRequest("POST", uri);
+      request.fields['upload_preset'] = 'anas2110';
+
+      if (uploadFile != null) {
+        request.files
+            .add(await http.MultipartFile.fromPath('file', uploadFile.path));
+      } else if (webVideo != null) {
+        request.files.add(http.MultipartFile.fromBytes('file', webVideo,
+            filename: 'upload.mp4'));
+      } else {
+        return null;
+      }
+
+      var response = await request.send();
+      final responseData = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(responseData);
+        return data['secure_url'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print("CLOUDINARY VIDEO ERROR: $e");
+      return null;
+    } finally {
+      if (!kIsWeb) {
+        // Clean up the compressed temp file once it's been uploaded.
+        await VideoCompress.deleteAllCache();
+      }
+    }
+  }
+
   // ── Create post ───────────────────────────────────────────────────────────
   Future<void> createPost({
     required WUser author,
@@ -121,12 +235,26 @@ class PostService {
     File? imageFile,
     Uint8List? webImage,
     String? gifUrl, // <-- NEW: direct GIF URL from Tenor
+    File? videoFile, // <-- NEW: local video picked from gallery/camera
+    Uint8List? webVideo, // <-- NEW: video bytes on web
+    void Function(double progress)? onVideoProgress, // <-- NEW: 0.0–1.0
   }) async {
     String? imageUrl;
+    String? videoUrl;
 
     try {
+      // Video takes priority over image/GIF — a post carries one media type.
+      if (videoFile != null || webVideo != null) {
+        videoUrl = await _uploadVideo(
+          file: videoFile,
+          webVideo: webVideo,
+          uid: author.uid,
+          onProgress: onVideoProgress,
+        );
+        if (videoUrl == null) throw Exception("Video upload failed");
+      }
       // If a local image was picked, upload it to Cloudinary
-      if (imageFile != null || webImage != null) {
+      else if (imageFile != null || webImage != null) {
         imageUrl = await _uploadImage(
           file: imageFile,
           webImage: webImage,
@@ -150,6 +278,7 @@ class PostService {
         content: content,
         imageUrl: imageUrl,
         isGif: gifUrl != null, // <-- tag as GIF so UI can render correctly
+        videoUrl: videoUrl,
         communityId: communityId,
         communityName: communityName,
         createdAt: DateTime.now(),
