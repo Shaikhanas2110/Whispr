@@ -27,9 +27,6 @@ class PostService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // ── Fetch feeds ──────────────────────────────────────────────────────────
-  // Note: all three exclude video posts (hasVideo == false) — videos only
-  // ever surface in the Reels tab via fetchVideoPosts() below.
   Future<List<WPost>> fetchTrendingPosts({DocumentSnapshot? lastDoc}) async {
     var q = _db
         .collection(AppConstants.postsCollection)
@@ -176,7 +173,7 @@ class PostService {
           final info = await VideoCompress.compressVideo(
             uploadFile.path,
             quality: VideoQuality.LowQuality,
-            frameRate: 24,
+            frameRate: 60,
             deleteOrigin: false,
             includeAudio: true,
           );

@@ -131,6 +131,22 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                         ),
                       ],
                     ),
+                    actions: [
+                      GestureDetector(
+                        onTap: () => _showCreateCommunitySheet(context),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 14),
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: NewPalette.cardBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: NewPalette.border),
+                          ),
+                          child: const Icon(Icons.add,
+                              color: NewPalette.white, size: 20),
+                        ),
+                      ),
+                    ],
                     bottom: PreferredSize(
                       preferredSize: const Size.fromHeight(64),
                       child: Container(
@@ -240,23 +256,6 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
             },
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateCommunitySheet(context),
-        backgroundColor: NewPalette.primary,
-        foregroundColor: NewPalette.background,
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        icon: const Icon(Icons.add_circle_outline_rounded,
-            color: NewPalette.background, size: 18),
-        label: const Text(
-          'Create Tribe',
-          style: TextStyle(
-              fontFamily: 'Nunito',
-              fontWeight: FontWeight.w900,
-              fontSize: 13,
-              letterSpacing: 0.1),
-        ),
       ),
     );
   }
