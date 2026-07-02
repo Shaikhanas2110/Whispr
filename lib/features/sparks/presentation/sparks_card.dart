@@ -238,174 +238,202 @@ class _ReelCardState extends ConsumerState<ReelCard> {
     return GestureDetector(
       onTap: _togglePlayPause,
       onDoubleTap: _onDoubleTapLike,
-      child: Container(
-        color: Colors.black,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // ── Video layer ──────────────────────────────────────────────
-            if (_failed)
-              const Center(
-                child: Icon(Icons.error_outline_rounded,
-                    color: ReelPalette.white, size: 40),
-              )
-            else if (!_initialized || _controller == null)
-              const Center(
-                child: CircularProgressIndicator(color: ReelPalette.primary),
-              )
-            else
-              FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _controller!.value.size.width,
-                  height: _controller!.value.size.height,
-                  child: VideoPlayer(_controller!),
+      child: Semantics(
+        label: "PlayPauseOverlay",
+        child: Container(
+          color: Colors.black,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // ── Video layer ──────────────────────────────────────────────
+              if (_failed)
+                const Center(
+                  child: Icon(Icons.error_outline_rounded,
+                      color: ReelPalette.white, size: 40),
+                )
+              else if (!_initialized || _controller == null)
+                const Center(
+                  child: CircularProgressIndicator(color: ReelPalette.primary),
+                )
+              else
+                Semantics(
+                  label: "SparkVideoPlayer",
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _controller!.value.size.width,
+                      height: _controller!.value.size.height,
+                      child: VideoPlayer(_controller!),
+                    ),
+                  ),
+                ),
+
+              // Pause indicator
+              if (_initialized &&
+                  _controller != null &&
+                  !_controller!.value.isPlaying)
+                Center(
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withOpacity(0.4),
+                    ),
+                    child: const Icon(Icons.play_arrow_rounded,
+                        color: Colors.white, size: 36),
+                  ),
+                ),
+
+              // Double-tap heart burst
+              Semantics(
+                label: "HeartBurst",
+                child: AnimatedOpacity(
+                  opacity: _showHeartBurst ? 1 : 0,
+                  duration: const Duration(milliseconds: 150),
+                  child: const Center(
+                    child: Icon(Icons.favorite_rounded,
+                        color: ReelPalette.primary, size: 110),
+                  ),
                 ),
               ),
 
-            // Pause indicator
-            if (_initialized &&
-                _controller != null &&
-                !_controller!.value.isPlaying)
-              Center(
+              // ── Bottom caption overlay ───────────────────────────────────
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
                 child: Container(
-                  width: 64,
-                  height: 64,
+                  padding: const EdgeInsets.fromLTRB(16, 60, 80, 28),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black.withOpacity(0.4),
-                  ),
-                  child: const Icon(Icons.play_arrow_rounded,
-                      color: Colors.white, size: 36),
-                ),
-              ),
-
-            // Double-tap heart burst
-            AnimatedOpacity(
-              opacity: _showHeartBurst ? 1 : 0,
-              duration: const Duration(milliseconds: 150),
-              child: const Center(
-                child: Icon(Icons.favorite_rounded,
-                    color: ReelPalette.primary, size: 110),
-              ),
-            ),
-
-            // ── Bottom caption overlay ───────────────────────────────────
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 60, 80, 28),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.78),
-                    ],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        WAvatar(
-                          pseudonym: post.authorPseudonym,
-                          colorIndex: post.authorColorIndex,
-                          isPremium: post.authorIsPremium,
-                          size: 32,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            post.authorPseudonym,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: ReelPalette.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            'r/${post.communityName.replaceAll(' ', '')}',
-                            style: const TextStyle(
-                              fontFamily: 'Nunito',
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: ReelPalette.white,
-                            ),
-                          ),
-                        ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.78),
                       ],
                     ),
-                    if (post.content.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      DefaultTextStyle(
-                        style: const TextStyle(
-                            color: ReelPalette.white,
-                            fontSize: 13,
-                            height: 1.4),
-                        child: HashtagText(text: post.content, maxLines: 2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          WAvatar(
+                            pseudonym: post.authorPseudonym,
+                            colorIndex: post.authorColorIndex,
+                            isPremium: post.authorIsPremium,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Semantics(
+                              label: "SparkAuthorName",
+                              child: Text(
+                                post.authorPseudonym,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: ReelPalette.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Semantics(
+                              label: "SparkCommunityTag",
+                              child: Text(
+                                'r/${post.communityName.replaceAll(' ', '')}',
+                                style: const TextStyle(
+                                  fontFamily: 'Nunito',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: ReelPalette.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      if (post.content.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        DefaultTextStyle(
+                          style: const TextStyle(
+                              color: ReelPalette.white,
+                              fontSize: 13,
+                              height: 1.4),
+                          child: HashtagText(text: post.content, maxLines: 2),
+                        ),
+                      ],
                     ],
+                  ),
+                ),
+              ),
+
+              // ── Right-side action rail ───────────────────────────────────
+              Positioned(
+                right: 10,
+                bottom: 100,
+                child: Column(
+                  children: [
+                    Semantics(
+                      label: "LikeButton",
+                      child: _ReelActionButton(
+                        icon: _isLiked
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color:
+                            _isLiked ? ReelPalette.primary : ReelPalette.white,
+                        label: '$_likeCount',
+                        onTap: _toggleLike,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Semantics(
+                      label: "CommentButton",
+                      child: _ReelActionButton(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        color: ReelPalette.white,
+                        label: '${post.commentCount}',
+                        onTap: _openComments,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Semantics(
+                      label: "ShareButton",
+                      child: _ReelActionButton(
+                        icon: Icons.ios_share_rounded,
+                        color: ReelPalette.white,
+                        label: 'Share',
+                        onTap: _share,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Semantics(
+                      label: "MoreButton",
+                      child: _ReelActionButton(
+                        icon: Icons.more_horiz_rounded,
+                        color: ReelPalette.white,
+                        label: '',
+                        onTap: _showContextMenu,
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-
-            // ── Right-side action rail ───────────────────────────────────
-            Positioned(
-              right: 10,
-              bottom: 100,
-              child: Column(
-                children: [
-                  _ReelActionButton(
-                    icon: _isLiked
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    color: _isLiked ? ReelPalette.primary : ReelPalette.white,
-                    label: '$_likeCount',
-                    onTap: _toggleLike,
-                  ),
-                  const SizedBox(height: 22),
-                  _ReelActionButton(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    color: ReelPalette.white,
-                    label: '${post.commentCount}',
-                    onTap: _openComments,
-                  ),
-                  const SizedBox(height: 22),
-                  _ReelActionButton(
-                    icon: Icons.ios_share_rounded,
-                    color: ReelPalette.white,
-                    label: 'Share',
-                    onTap: _share,
-                  ),
-                  const SizedBox(height: 22),
-                  _ReelActionButton(
-                    icon: Icons.more_horiz_rounded,
-                    color: ReelPalette.white,
-                    label: '',
-                    onTap: _showContextMenu,
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -435,13 +463,16 @@ class _ReelActionButton extends StatelessWidget {
           Icon(icon, color: color, size: 28),
           if (label.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: ReelPalette.white,
+            Semantics(
+              label: "LikeCount",
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: ReelPalette.white,
+                ),
               ),
             ),
           ],

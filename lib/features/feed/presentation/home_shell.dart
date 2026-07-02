@@ -82,13 +82,16 @@ class _BottomBar extends StatelessWidget {
                 current: currentIndex,
                 onTap: () => context.go('/communities'),
               ),
-              _NavItem(
-                icon: Icons.play_circle_fill_rounded,
-                inactiveIcon: Icons.play_circle_outline_rounded,
-                label: 'Sparks',
-                index: 2,
-                current: currentIndex,
-                onTap: () => context.push('/reels'),
+              Semantics(
+                label: "SparksTab",
+                child: _NavItem(
+                  icon: Icons.play_circle_fill_rounded,
+                  inactiveIcon: Icons.play_circle_outline_rounded,
+                  label: 'Sparks',
+                  index: 2,
+                  current: currentIndex,
+                  onTap: () => context.push('/reels'),
+                ),
               ),
               _NavItem(
                 icon: Icons.notifications_rounded,
