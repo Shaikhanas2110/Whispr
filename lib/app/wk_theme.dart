@@ -166,7 +166,7 @@ ThemeData buildKidoryTheme({bool dark = true}) {
       titleTextStyle: TextStyle(
         fontFamily: 'Nunito',
         fontSize: 20,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w600,
         color: WKTheme.textPrimary,
       ),
     ),
@@ -174,19 +174,19 @@ ThemeData buildKidoryTheme({bool dark = true}) {
       displayLarge: TextStyle(
         fontFamily: 'Nunito',
         fontSize: 32,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w600,
         color: WKTheme.textPrimary,
       ),
       headlineLarge: TextStyle(
         fontFamily: 'Nunito',
         fontSize: 26,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w600,
         color: WKTheme.textPrimary,
       ),
       headlineMedium: TextStyle(
         fontFamily: 'Nunito',
         fontSize: 22,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w600,
         color: WKTheme.textPrimary,
       ),
       headlineSmall: TextStyle(

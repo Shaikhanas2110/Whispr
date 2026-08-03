@@ -10,11 +10,11 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((r
 });
 
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.dark) { _load(); }
+  ThemeModeNotifier() : super(ThemeMode.light) { _load(); }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool('isDark') ?? true;
+    final isDark = prefs.getBool('isDark') ?? false;
     state = isDark ? ThemeMode.dark : ThemeMode.light;
     _applySystemUI(isDark);
   }
@@ -34,7 +34,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-      systemNavigationBarColor: isDark ? const Color(0xFF12121E) : const Color(0xFFFFF8F3),
+      systemNavigationBarColor: isDark ? const Color(0xFF12121E) : const Color(0xFFFFFFFF),
       systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
     ));
   }
@@ -49,10 +49,10 @@ class WTheme {
   static const Color card        = Color(0xFF1E1E2E);
   static const Color border      = Color(0xFF2A2A3E);
   static const Color borderLight = Color(0xFF363650);
-  static const Color purple      = Color(0xFF7C6EFF);
-  static const Color purple2     = Color(0xFF9D91FF);
-  static const Color purpleGlow  = Color(0x337C6EFF);
-  static const Color purpleSoft  = Color(0xFF2D2548);
+  static const Color purple      = Color(0xFF8C97B8);
+  static const Color purple2     = Color(0xFFA6AFC9);
+  static const Color purpleGlow  = Color(0x338C97B8);
+  static const Color purpleSoft  = Color(0xFF23242E);
   static const Color pink        = Color(0xFFF472B6);
   static const Color green       = Color(0xFF4ADE80);
   static const Color amber       = Color(0xFFFCD34D);
@@ -62,18 +62,18 @@ class WTheme {
   static const Color textSecondary  = Color(0xFFA0A0C0);
   static const Color textMuted      = Color(0xFF6060A0);
 
-  // Light / warm tokens
-  static const Color lBg          = Color(0xFFFFF8F3);
-  static const Color lBg2         = Color(0xFFFFF0E8);
-  static const Color lBg3         = Color(0xFFFFE4D4);
+  // Light tokens — clean white, subtle & professional
+  static const Color lBg          = Color(0xFFFFFFFF);
+  static const Color lBg2         = Color(0xFFFAFAFA);
+  static const Color lBg3         = Color(0xFFF3F3F5);
   static const Color lCard        = Color(0xFFFFFFFF);
-  static const Color lBorder      = Color(0xFFFFD5BE);
-  static const Color lPrimary     = Color(0xFFFF6B35);
-  static const Color lPrimary2    = Color(0xFFFF8C5A);
-  static const Color lPrimarySoft = Color(0xFFFFEDE6);
-  static const Color lText        = Color(0xFF1A0A00);
-  static const Color lTextSec     = Color(0xFF6B3A2A);
-  static const Color lTextMuted   = Color(0xFFB07050);
+  static const Color lBorder      = Color(0xFFE5E5EA);
+  static const Color lPrimary     = Color(0xFF5B6B8C);
+  static const Color lPrimary2    = Color(0xFF7784A3);
+  static const Color lPrimarySoft = Color(0xFFEEF1F6);
+  static const Color lText        = Color(0xFF1C1C1F);
+  static const Color lTextSec     = Color.fromARGB(255, 49, 50, 55);
+  static const Color lTextMuted   = Color(0xFF9A9AA2);
 
   static const List<Color> avatarColors = [
     Color(0xFF7C6EFF), Color(0xFFFF6B35), Color(0xFF4ADE80),
@@ -82,11 +82,11 @@ class WTheme {
   ];
 
   static const LinearGradient purpleGradient = LinearGradient(
-    colors: [Color(0xFF7C6EFF), Color(0xFFA855F7)],
+    colors: [Color(0xFF8C97B8), Color(0xFF6E7A9E)],
     begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
-  static const LinearGradient warmGradient = LinearGradient(
-    colors: [Color(0xFFFF6B35), Color(0xFFFF3CAC)],
+  static const LinearGradient lightGradient = LinearGradient(
+    colors: [Color(0xFF5B6B8C), Color(0xFF7784A3)],
     begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
   static const LinearGradient bgGradient = LinearGradient(
@@ -123,15 +123,15 @@ class WTheme {
       scaffoldBackgroundColor: bg_,
       colorScheme: ColorScheme(
         brightness: br,
-        primary: primary_, secondary: isDark ? pink : const Color(0xFFFF3CAC),
+        primary: primary_, secondary: isDark ? pink : const Color(0xFF9A8CAE),
         surface: card_, background: bg_,
         onPrimary: Colors.white, onSecondary: Colors.white,
         onSurface: tPrimary_, onBackground: tPrimary_,
-        error: isDark ? red : const Color(0xFFDC2626), onError: Colors.white,
+        error: isDark ? red : const Color(0xFFC0392B), onError: Colors.white,
         outline: border_,
       ),
       textTheme: TextTheme(
-        displayLarge:  GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, color: tPrimary_, letterSpacing: -1),
+        displayLarge:  GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w600, color: tPrimary_, letterSpacing: -1),
         displayMedium: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w700, color: tPrimary_, letterSpacing: -0.5),
         displaySmall:  GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: tPrimary_),
         headlineMedium:GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: tPrimary_),
@@ -147,7 +147,7 @@ class WTheme {
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: bg2_, elevation: 0, scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: tPrimary_),
+        titleTextStyle: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: tPrimary_),
         iconTheme: IconThemeData(color: tSec_),
       ),
       cardTheme: CardThemeData(
@@ -206,5 +206,5 @@ extension WThemeX on BuildContext {
   Color get wRed        => isDark ? WTheme.red   : const Color(0xFFDC2626);
   Color get wGreen      => isDark ? WTheme.green : const Color(0xFF16A34A);
 
-  LinearGradient get wGradient => isDark ? WTheme.purpleGradient : WTheme.warmGradient;
+  LinearGradient get wGradient => isDark ? WTheme.purpleGradient : WTheme.lightGradient;
 }
