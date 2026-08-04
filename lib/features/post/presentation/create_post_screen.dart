@@ -19,15 +19,23 @@ import '../../../shared/widgets/w_avatar.dart';
 // Palette (unchanged)
 // ---------------------------------------------------------------------------
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color surfaceMuted = Color(0xFFB5B5B5);
-  static const Color background = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 // ---------------------------------------------------------------------------
@@ -221,11 +229,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       if (mounted) {
         context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
                 Text('🫧 ', style: TextStyle(fontSize: 16)),
-                Text('Your whispr is live!',
+                Text('Your post is live!',
                     style: TextStyle(
                         fontFamily: 'Nunito',
                         fontWeight: FontWeight.w700,
@@ -252,6 +260,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final userAsync = ref.watch(currentUserProvider);
     final canPost = !_posting && (_ctrl.text.trim().isNotEmpty || _hasMedia);
 
@@ -272,8 +281,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(color: NewPalette.border),
               ),
-              child: const Icon(Icons.close_rounded,
-                  color: NewPalette.white, size: 18),
+              child:
+                  Icon(Icons.close_rounded, color: NewPalette.white, size: 18),
             ),
           ),
         ),
@@ -286,21 +295,21 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 RichText(
-                  text: const TextSpan(
+                  text: TextSpan(
                     text: 'N',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 18,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: NewPalette.primary,
                       letterSpacing: -0.3,
                     ),
                     children: [
                       TextSpan(
-                        text: 'ew Whispr',
+                        text: 'ew Post',
                         style: TextStyle(
                           color: NewPalette.white,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -353,16 +362,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 _videoProgress! < 1.0
                                     ? '${(_videoProgress! * 100).clamp(0, 99).toStringAsFixed(0)}%'
                                     : 'Posting',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Nunito',
                                   color: NewPalette.background,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 12,
                                 ),
                               ),
                             ],
                           )
-                        : const SizedBox(
+                        : SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
@@ -371,13 +380,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             ),
                           ))
                     : Text(
-                        'Whispr',
+                        'Post',
                         style: TextStyle(
                           fontFamily: 'Nunito',
                           color: canPost
                               ? NewPalette.background
                               : NewPalette.white.withOpacity(0.3),
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w600,
                           fontSize: 13,
                           letterSpacing: 0.2,
                         ),
@@ -424,10 +433,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               children: [
                                 Text(
                                   user.pseudonym,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Nunito',
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w600,
                                     color: NewPalette.white,
                                   ),
                                 ),
@@ -436,7 +445,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                     Container(
                                       width: 6,
                                       height: 6,
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color: NewPalette.primary,
                                       ),
@@ -468,7 +477,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               maxLength}) =>
                           null,
                       onChanged: (_) => setState(() {}),
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 15, color: NewPalette.white, height: 1.6),
                       decoration: InputDecoration(
                         hintText:
@@ -489,8 +498,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(
-                              color: NewPalette.primary, width: 1.5),
+                          borderSide:
+                              BorderSide(color: NewPalette.primary, width: 1.5),
                         ),
                         contentPadding: const EdgeInsets.all(16),
                       ),
@@ -524,7 +533,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                           )
                                         : Container(
                                             color: NewPalette.cardBg,
-                                            child: const Center(
+                                            child: Center(
                                                 child:
                                                     CircularProgressIndicator(
                                                         color: NewPalette
@@ -541,7 +550,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                         placeholder: (_, __) => Container(
                                             height: 200,
                                             color: NewPalette.cardBg,
-                                            child: const Center(
+                                            child: Center(
                                                 child:
                                                     CircularProgressIndicator(
                                                         color: NewPalette
@@ -573,11 +582,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: NewPalette.primary),
                                 ),
-                                child: const Text('GIF',
+                                child: Text('GIF',
                                     style: TextStyle(
                                         color: NewPalette.primary,
                                         fontSize: 10,
-                                        fontWeight: FontWeight.w900,
+                                        fontWeight: FontWeight.w600,
                                         fontFamily: 'Nunito')),
                               ),
                             ),
@@ -594,7 +603,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: NewPalette.primary),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.play_arrow_rounded,
@@ -603,7 +612,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                         style: TextStyle(
                                             color: NewPalette.primary,
                                             fontSize: 10,
-                                            fontWeight: FontWeight.w900,
+                                            fontWeight: FontWeight.w600,
                                             fontFamily: 'Nunito')),
                                   ],
                                 ),
@@ -631,7 +640,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ],
 
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'Choose community',
                       style: TextStyle(
                           fontFamily: 'Nunito',
@@ -641,7 +650,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ),
                     const SizedBox(height: 10),
                     ref.watch(communitiesStreamProvider).when(
-                          loading: () => const SizedBox(
+                          loading: () => SizedBox(
                             height: 44,
                             child: Center(
                                 child: CircularProgressIndicator(
@@ -718,7 +727,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                                   ? color
                                                   : NewPalette.textMuted,
                                               fontWeight: isSelected
-                                                  ? FontWeight.w800
+                                                  ? FontWeight.w600
                                                   : FontWeight.w500,
                                             ),
                                           ),
@@ -774,7 +783,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             style: TextStyle(
                                 fontSize: 9,
                                 color: _counterColor,
-                                fontWeight: FontWeight.w800),
+                                fontWeight: FontWeight.w600),
                           ),
                       ],
                     ),
@@ -805,6 +814,7 @@ class _ToolBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(

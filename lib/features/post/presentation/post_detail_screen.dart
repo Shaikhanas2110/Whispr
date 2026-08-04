@@ -14,15 +14,23 @@ import '../../../app/constants.dart';
 import 'package:share_plus/share_plus.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color surfaceMuted = Color(0xFFB5B5B5);
-  static const Color background = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 // ---------------------------------------------------------------------------
@@ -149,8 +157,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             style: TextStyle(
                 fontFamily: 'Nunito',
                 color: Colors.white,
-                fontWeight: FontWeight.w900)),
-        content: const Text(
+                fontWeight: FontWeight.w600)),
+        content: Text(
             'This action removes the post permanently from everyone\'s feed views. This cannot be reversed.',
             style: TextStyle(
                 fontFamily: 'Nunito', color: NewPalette.white, fontSize: 13)),
@@ -173,7 +181,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Post deleted successfully 🗑️',
+                      content: Text('Post deleted successfully 🗑️',
                           style: TextStyle(
                               fontFamily: 'Nunito',
                               fontWeight: FontWeight.bold,
@@ -203,7 +211,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             child: const Text('Delete',
                 style: TextStyle(
                     fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: Colors.white)),
           ),
         ],
@@ -219,6 +227,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final postAsync = ref.watch(_postDetailProvider(widget.postId));
     final commentsStream = ref.watch(_commentsProvider(widget.postId));
     final currentUserAsync = ref.watch(currentUserProvider);
@@ -228,11 +237,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       appBar: AppBar(
         backgroundColor: NewPalette.background,
         elevation: 0,
-        iconTheme: const IconThemeData(color: NewPalette.white),
-        title: const Text('Whispr',
+        iconTheme: IconThemeData(color: NewPalette.white),
+        title: Text('Post',
             style: TextStyle(
                 fontFamily: 'Nunito',
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w600,
                 color: NewPalette.white)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -240,17 +249,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: NewPalette.white),
+            icon: Icon(Icons.share_outlined, color: NewPalette.white),
             onPressed: () async {
               final post =
                   ref.read(_postDetailProvider(widget.postId)).valueOrNull;
               if (post != null) {
-                final url = 'https://whispr.app/post/${post.id}';
+                final url = 'https://undertone.app/post/${post.id}';
                 final preview = post.content.length > 100
                     ? '${post.content.substring(0, 100)}…'
                     : post.content;
                 await Share.share('$preview\n\n$url',
-                    subject: 'Check this Whispr');
+                    subject: 'Check this out on Undertone');
               }
             },
           ),
@@ -285,7 +294,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: postAsync.when(
-                    loading: () => const Padding(
+                    loading: () => Padding(
                       padding: EdgeInsets.all(32),
                       child: Center(
                           child: CircularProgressIndicator(
@@ -298,7 +307,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 style:
                                     const TextStyle(color: Colors.redAccent)))),
                     data: (post) => (post == null)
-                        ? const Center(
+                        ? Center(
                             child: Padding(
                                 padding: EdgeInsets.all(32),
                                 child: Text('Post not found',
@@ -319,26 +328,26 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             color: NewPalette.primarySoft,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.chat_bubble_outline_rounded,
+                          child: Icon(Icons.chat_bubble_outline_rounded,
                               size: 14, color: NewPalette.primary),
                         ),
                         const SizedBox(width: 10),
                         commentsStream.when(
-                          loading: () => const Text('Comments',
+                          loading: () => Text('Comments',
                               style: TextStyle(
                                   fontFamily: 'Nunito',
                                   fontWeight: FontWeight.w700,
                                   color: NewPalette.white)),
-                          error: (_, __) => const Text('Comments',
+                          error: (_, __) => Text('Comments',
                               style: TextStyle(
                                   fontFamily: 'Nunito',
                                   fontWeight: FontWeight.w700,
                                   color: NewPalette.white)),
                           data: (c) => Text(
                             '${c.length} Total Comments',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontFamily: 'Nunito',
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w600,
                                 fontSize: 14,
                                 color: NewPalette.white),
                           ),
@@ -350,7 +359,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 SliverToBoxAdapter(
                     child: Container(height: 1, color: NewPalette.border)),
                 commentsStream.when(
-                  loading: () => const SliverToBoxAdapter(
+                  loading: () => SliverToBoxAdapter(
                       child: Padding(
                           padding: EdgeInsets.all(32),
                           child: Center(
@@ -513,11 +522,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(color: NewPalette.primary),
                             ),
-                            child: const Text('GIF',
+                            child: Text('GIF',
                                 style: TextStyle(
                                     color: NewPalette.primary,
                                     fontSize: 9,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'Nunito')),
                           ),
                         ),
@@ -548,7 +557,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               style: TextStyle(
                                   fontFamily: 'Nunito',
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w600,
                                   color: _commentGifUrl != null
                                       ? NewPalette.primary
                                       : NewPalette.textMuted)),
@@ -558,8 +567,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     Expanded(
                       child: TextField(
                         controller: _commentCtrl,
-                        style: const TextStyle(
-                            fontSize: 14, color: NewPalette.white),
+                        style: TextStyle(fontSize: 14, color: NewPalette.white),
                         decoration: InputDecoration(
                           hintText: _replyingToPseudonym != null
                               ? 'Reply to $_replyingToPseudonym…'
@@ -575,7 +583,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               borderSide: BorderSide(color: NewPalette.border)),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
+                            borderSide: BorderSide(
                                 color: NewPalette.primary, width: 1.5),
                           ),
                         ),
@@ -594,17 +602,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       child: Container(
                         width: 42,
                         height: 42,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: NewPalette.primary,
                           shape: BoxShape.circle,
                         ),
                         child: _submitting
-                            ? const Padding(
+                            ? Padding(
                                 padding: EdgeInsets.all(12),
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     color: NewPalette.background))
-                            : const Icon(Icons.send_rounded,
+                            : Icon(Icons.send_rounded,
                                 color: NewPalette.background, size: 16),
                       ),
                     ),
@@ -625,6 +633,7 @@ class _PostDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final commData = AppConstants.defaultCommunities.firstWhere(
       (c) => c['name'] == post.communityName,
       orElse: () => {'color': 0xFFBF6B3D, 'icon': '💬'},
@@ -663,7 +672,7 @@ class _PostDetailBody extends StatelessWidget {
                                   fontFamily: 'Nunito',
                                   fontSize: 11,
                                   color: commColor,
-                                  fontWeight: FontWeight.w800)),
+                                  fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -691,10 +700,10 @@ class _PostDetailBody extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(post.authorPseudonym,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
                             color: NewPalette.white)),
                     if (post.authorIsPremium) ...[
                       const SizedBox(width: 6),
@@ -704,11 +713,11 @@ class _PostDetailBody extends StatelessWidget {
                         decoration: BoxDecoration(
                             color: NewPalette.primary,
                             borderRadius: BorderRadius.circular(6)),
-                        child: const Text('✦ PRO',
+                        child: Text('✦ PRO',
                             style: TextStyle(
                                 fontSize: 9,
                                 color: NewPalette.background,
-                                fontWeight: FontWeight.w900)),
+                                fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ],
@@ -716,7 +725,7 @@ class _PostDetailBody extends StatelessWidget {
                 const SizedBox(height: 14),
                 // Post content text
                 Text(post.content,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 15, color: NewPalette.white, height: 1.6)),
 
                 // ── Post video ──────────────────────────────────────────────
@@ -759,11 +768,11 @@ class _PostDetailBody extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(color: NewPalette.primary),
                             ),
-                            child: const Text('GIF',
+                            child: Text('GIF',
                                 style: TextStyle(
                                     color: NewPalette.primary,
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'Nunito')),
                           ),
                         ),
@@ -788,7 +797,7 @@ class _PostDetailBody extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: NewPalette.border)),
                         child: Text('${e.value} $count',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: NewPalette.white)),
@@ -850,6 +859,7 @@ class _RenderedCommentNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final comment = item.comment;
     final bool isNestedReply = item.indentationLevel > 0;
     final double leftPaddingOffset = isNestedReply
@@ -884,7 +894,7 @@ class _RenderedCommentNode extends StatelessWidget {
                           style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: isNestedReply ? 12.0 : 13.0,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
                             color: NewPalette.white,
                             letterSpacing: -0.1,
                           ),
@@ -945,11 +955,11 @@ class _RenderedCommentNode extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(color: NewPalette.primary),
                               ),
-                              child: const Text('GIF',
+                              child: Text('GIF',
                                   style: TextStyle(
                                       color: NewPalette.primary,
                                       fontSize: 8,
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w600,
                                       fontFamily: 'Nunito')),
                             ),
                           ),
@@ -1028,6 +1038,7 @@ class _EmptyCommentsPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Padding(
       padding: const EdgeInsets.all(40),
       child: Column(
@@ -1041,10 +1052,10 @@ class _EmptyCommentsPlaceholder extends StatelessWidget {
                 const Center(child: Text('💬', style: TextStyle(fontSize: 32))),
           ),
           const SizedBox(height: 14),
-          const Text('No comments yet',
+          Text('No comments yet',
               style: TextStyle(
                   fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   fontSize: 16,
                   color: NewPalette.white)),
           const SizedBox(height: 4),

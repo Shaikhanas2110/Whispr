@@ -4,15 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/community_service.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color surfaceMuted = Color(0xFFB5B5B5);
-  static const Color background = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color cardBg = white.withOpacity(0.03);
-  static final Color border = white.withOpacity(0.08);
-  static final Color primarySoft = primary.withOpacity(0.12);
-  static final Color textMuted = white.withOpacity(0.45);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => white.withOpacity(0.03);
+  static Color get border => white.withOpacity(0.08);
+  static Color get primarySoft => primary.withOpacity(0.12);
+  static Color get textMuted => white.withOpacity(0.45);
 }
 
 class CommunityScreen extends ConsumerStatefulWidget {
@@ -37,6 +45,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final communitiesAsync = ref.watch(communitiesStreamProvider);
 
     return Scaffold(
@@ -63,7 +72,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
           ),
 
           communitiesAsync.when(
-            loading: () => const Center(
+            loading: () => Center(
               child: CircularProgressIndicator(
                   color: NewPalette.primary, strokeWidth: 2),
             ),
@@ -97,12 +106,12 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         RichText(
-                          text: const TextSpan(
+                          text: TextSpan(
                             text: 'C',
                             style: TextStyle(
                               fontFamily: 'Nunito',
                               fontSize: 22,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w600,
                               color: NewPalette.primary,
                               letterSpacing: -0.5,
                             ),
@@ -111,7 +120,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                                 text: 'ommunities',
                                 style: TextStyle(
                                   color: NewPalette.white,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w600,
                                   letterSpacing: 0.1,
                                 ),
                               ),
@@ -124,7 +133,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                           style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 8,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w600,
                             color: NewPalette.textMuted,
                             letterSpacing: 1.6,
                           ),
@@ -142,7 +151,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: NewPalette.border),
                           ),
-                          child: const Icon(Icons.add,
+                          child: Icon(Icons.add,
                               color: NewPalette.white, size: 20),
                         ),
                       ),
@@ -154,7 +163,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                         child: TextField(
                           onChanged: (v) => setState(() => _query = v),
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 14,
                               color: NewPalette.white,
                               fontFamily: 'Nunito'),
@@ -189,7 +198,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(
+                              borderSide: BorderSide(
                                   color: NewPalette.primary, width: 1.2),
                             ),
                           ),
@@ -198,7 +207,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                     ),
                   ),
                   if (filtered.isEmpty)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       hasScrollBody: false,
                       child: Center(
                         child: Column(
@@ -226,7 +235,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                           style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
                             color: NewPalette.textMuted,
                             letterSpacing: 1.0,
                           ),
@@ -272,7 +281,7 @@ class _CreateCommunityModal extends ConsumerStatefulWidget {
 class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
   final _nameCtrl = TextEditingController();
   String _selectedIcon = '🫧';
-  int _selectedColorValue = 0xFFA7ED10;
+  int _selectedColorValue = 0xFF8C97B8;
 
   final List<String> _emojis = [
     '🫧',
@@ -289,12 +298,12 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
     '🤫'
   ];
   final List<int> _colors = [
-    0xFFA7ED10,
-    0xFFFF453A,
-    0xFF30D158,
-    0xFF0A84FF,
-    0xFFBF5AF2,
-    0xFFFF9F0A
+    0xFF8C97B8,
+    0xFFB08968,
+    0xFF7C9885,
+    0xFF6C93B0,
+    0xFFA88BB0,
+    0xFFC2A66B
   ];
 
   void _submit() async {
@@ -336,6 +345,7 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -357,12 +367,12 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Launch New Tribe',
             style: TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 18,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w600,
                 color: NewPalette.white),
           ),
           const SizedBox(height: 18),
@@ -386,7 +396,7 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
               Expanded(
                 child: TextField(
                   controller: _nameCtrl,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 14,
                       color: NewPalette.white,
                       fontFamily: 'Nunito'),
@@ -416,8 +426,8 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
                         borderSide: BorderSide(color: NewPalette.border)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: NewPalette.primary, width: 1.2),
+                      borderSide:
+                          BorderSide(color: NewPalette.primary, width: 1.2),
                     ),
                   ),
                 ),
@@ -425,12 +435,12 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
             ],
           ),
           const SizedBox(height: 22),
-          const Text(
+          Text(
             'Choose Token Badge',
             style: TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 11,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: NewPalette.surfaceMuted,
                 letterSpacing: 0.3),
           ),
@@ -466,12 +476,12 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
             ),
           ),
           const SizedBox(height: 22),
-          const Text(
+          Text(
             'Choose Identity Color',
             style: TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 11,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: NewPalette.surfaceMuted,
                 letterSpacing: 0.3),
           ),
@@ -512,12 +522,12 @@ class _CreateCommunityModalState extends ConsumerState<_CreateCommunityModal> {
                 color: NewPalette.primary,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Text(
+              child: Text(
                 'Establish Community',
                 style: TextStyle(
                     fontFamily: 'Nunito',
                     color: NewPalette.background,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     fontSize: 14,
                     letterSpacing: 0.1),
               ),
@@ -536,6 +546,7 @@ class _CommunityCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     final String communityId = data['id'] as String;
     final color = Color(data['color'] as int);
 
@@ -607,10 +618,10 @@ class _CommunityCard extends ConsumerWidget {
               // Typography Hierarchy Content Matrix
               Text(
                 data['name'] as String? ?? '',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 15.5,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w600,
                   color: NewPalette.white,
                   letterSpacing: -0.2,
                 ),
@@ -638,7 +649,7 @@ class _CommunityCard extends ConsumerWidget {
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 11.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: isJoined ? NewPalette.primary : NewPalette.white,
                     ),
                   ),

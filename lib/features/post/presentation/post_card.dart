@@ -13,15 +13,22 @@ import '../../../shared/widgets/hashtag_text.dart';
 import '../presentation/post_video_player.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color background = Color(0xFF000000); // Pure Reddit Black
-  static const Color white = Color(0xFFFFFFFF);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color glassBorder = white.withOpacity(0.08);
-  static final Color textMuted = white.withOpacity(0.45);
-  static final Color buttonBg = white.withOpacity(0.06); // Muted capsule fill
-  static final Color primarySoft =
-      primary.withOpacity(0.15); // Translucent active highlight
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+
+  static Color get glassBorder => white.withOpacity(0.08);
+  static Color get textMuted => white.withOpacity(0.45);
+  static Color get buttonBg => white.withOpacity(0.06);
+  static Color get primarySoft => primary.withOpacity(0.15);
 }
 
 class PostCard extends ConsumerStatefulWidget {
@@ -133,12 +140,12 @@ class _PostCardState extends ConsumerState<PostCard> {
               label: 'Share post',
               onTap: () async {
                 Navigator.pop(context);
-                final url = 'https://whispr.app/post/${_post.id}';
+                final url = 'https://undertone.app/post/${_post.id}';
                 final preview = _post.content.length > 100
                     ? '${_post.content.substring(0, 100)}…'
                     : _post.content;
                 await Share.share('$preview\n\n$url',
-                    subject: 'Check this Whispr 🫧');
+                    subject: 'Check this out on Undertone');
               },
             ),
             _MenuTile(
@@ -159,6 +166,7 @@ class _PostCardState extends ConsumerState<PostCard> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return GestureDetector(
       onTap: widget.onTap ?? () => context.push('/post/${_post.id}'),
       child: Container(
@@ -180,10 +188,10 @@ class _PostCardState extends ConsumerState<PostCard> {
                   const SizedBox(width: 8),
                   Text(
                     'r/${_post.communityName.replaceAll(' ', '')}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: NewPalette.white,
                     ),
                   ),
@@ -250,11 +258,11 @@ class _PostCardState extends ConsumerState<PostCard> {
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: NewPalette.primary),
                           ),
-                          child: const Text('GIF',
+                          child: Text('GIF',
                               style: TextStyle(
                                   color: NewPalette.primary,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w600,
                                   fontFamily: 'Nunito')),
                         ),
                       ),
@@ -316,7 +324,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                               color: _isLiked
                                   ? NewPalette.primary
                                   : NewPalette.white,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -343,7 +351,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                           const SizedBox(width: 6),
                           Text(
                             '${_post.commentCount}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Nunito',
                               fontSize: 12,
                               color: NewPalette.white,
@@ -370,7 +378,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () async {
-                      final url = 'https://whispr.app/post/${_post.id}';
+                      final url = 'https://undertone.app/post/${_post.id}';
                       await Share.share(_post.content + '\n\n' + url);
                     },
                     child: Container(
@@ -410,6 +418,7 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final col = color ?? NewPalette.white;
     return ListTile(
       leading: Container(

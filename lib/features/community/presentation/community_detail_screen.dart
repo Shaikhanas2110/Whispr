@@ -8,15 +8,23 @@ import '../data/community_service.dart';
 import '../../../app/constants.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color surfaceMuted = Color(0xFFB5B5B5); // Neutral Gray
-  static const Color background = Color(0xFF000000); // Deep Black
-  static const Color white = Color(0xFFFFFFFF); // Crisp White
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 class CommunityDetailScreen extends ConsumerWidget {
@@ -25,6 +33,7 @@ class CommunityDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     // 1. Listen to real-time data streams
     final postsAsync = ref.watch(communityPostsStreamProvider(communityId));
     final joinedAsync = ref.watch(joinedCommunitiesProvider);
@@ -62,7 +71,7 @@ class CommunityDetailScreen extends ConsumerWidget {
             pinned: true,
             backgroundColor: NewPalette.background,
             elevation: 0,
-            iconTheme: const IconThemeData(color: NewPalette.white),
+            iconTheme: IconThemeData(color: NewPalette.white),
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
@@ -94,7 +103,7 @@ class CommunityDetailScreen extends ConsumerWidget {
                         fontFamily: 'Nunito',
                         color:
                             isJoined ? NewPalette.white : NewPalette.background,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w600,
                         fontSize: 12,
                         letterSpacing: 0.2,
                       ),
@@ -153,10 +162,10 @@ class CommunityDetailScreen extends ConsumerWidget {
                             const SizedBox(height: 12),
                             Text(
                               meta['name'] as String? ?? communityId,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Nunito',
                                 fontSize: 26,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w600,
                                 color: NewPalette.white,
                               ),
                             ),
@@ -172,7 +181,7 @@ class CommunityDetailScreen extends ConsumerWidget {
 
           // 2. Stream Resolution Pipeline
           postsAsync.when(
-            loading: () => const SliverFillRemaining(
+            loading: () => SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
                 child: CircularProgressIndicator(
@@ -233,12 +242,11 @@ class CommunityDetailScreen extends ConsumerWidget {
         backgroundColor: NewPalette.primary,
         foregroundColor: NewPalette.background,
         elevation: 4,
-        icon: const Icon(Icons.edit_rounded,
-            color: NewPalette.background, size: 18),
+        icon: Icon(Icons.edit_rounded, color: NewPalette.background, size: 18),
         label: const Text('Post here',
             style: TextStyle(
               fontFamily: 'Nunito',
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
             )),
       ),
     );

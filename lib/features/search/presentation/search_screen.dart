@@ -8,16 +8,23 @@ import '../../../app/constants.dart';
 
 // Locally defined palette tokens based on your specified hex codes
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color surfaceMuted = Color(0xFFB5B5B5); // Neutral Gray
-  static const Color background = Color(0xFF000000); // Deep Black
-  static const Color white = Color(0xFFFFFFFF); // Crisp White
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  // Derived style opacities for sleek UI nesting
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 // ── Search Service ────────────────────────────────────────────
@@ -94,6 +101,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Scaffold(
       backgroundColor: NewPalette.background,
       appBar: AppBar(
@@ -101,7 +109,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         elevation: 0,
         titleSpacing: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: NewPalette.white),
+          icon: Icon(Icons.arrow_back_rounded, color: NewPalette.white),
           onPressed: () => Navigator.maybePop(context),
         ),
         title: Container(
@@ -114,7 +122,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           child: TextField(
             controller: _ctrl,
             autofocus: true,
-            style: const TextStyle(fontSize: 14, color: NewPalette.white),
+            style: TextStyle(fontSize: 14, color: NewPalette.white),
             cursorColor: NewPalette.primary,
             decoration: InputDecoration(
               hintText: 'Search posts, hashtags, people…',
@@ -165,17 +173,18 @@ class _SuggestionsPanel extends StatelessWidget {
   final void Function(String) onTap;
   const _SuggestionsPanel({required this.onTap});
 
-  static const _suggestions = [
+  static final _suggestions = [
     ('🔥', 'Trending topics', NewPalette.primary),
-    ('💔', 'Relationships', Color(0xFFE85580)),
-    ('🧠', 'Mental Health', Color(0xFF9C27B0)),
-    ('💼', 'Career vents', Color(0xFF009688)),
-    ('😂', 'Dark Humor', Color(0xFFFFC107)),
-    ('🙈', 'Confessions', Color(0xFFFF5722)),
+    ('💔', 'Relationships', const Color(0xFFE85580)),
+    ('🧠', 'Mental Health', const Color(0xFF9C27B0)),
+    ('💼', 'Career vents', const Color(0xFF009688)),
+    ('😂', 'Dark Humor', const Color(0xFFFFC107)),
+    ('🙈', 'Confessions', const Color(0xFFFF5722)),
   ];
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -184,7 +193,7 @@ class _SuggestionsPanel extends StatelessWidget {
           style: TextStyle(
             fontFamily: 'Nunito',
             fontSize: 11,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
             color: NewPalette.textMuted,
             letterSpacing: 1,
           ),
@@ -237,7 +246,7 @@ class _SuggestionsPanel extends StatelessWidget {
           style: TextStyle(
             fontFamily: 'Nunito',
             fontSize: 11,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
             color: NewPalette.textMuted,
             letterSpacing: 1,
           ),
@@ -271,7 +280,7 @@ class _SuggestionsPanel extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -301,11 +310,12 @@ class _ResultsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     final resultsAsync = ref.watch(searchResultsProvider(query));
 
     return resultsAsync.when(
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: NewPalette.primary)),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: NewPalette.primary)),
       error: (e, _) => Center(
           child: Text('Error: $e',
               style: const TextStyle(color: Colors.redAccent))),
@@ -329,7 +339,7 @@ class _ResultsPanel extends ConsumerWidget {
                 const SizedBox(height: 20),
                 Text(
                   'No results for "$query"',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Nunito',
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -363,11 +373,11 @@ class _ResultsPanel extends ConsumerWidget {
                     ),
                     child: Text(
                       '${posts.length} results',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Nunito',
                         fontSize: 11,
                         color: NewPalette.primary,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),

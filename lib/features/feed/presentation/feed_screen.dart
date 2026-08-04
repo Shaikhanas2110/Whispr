@@ -7,15 +7,23 @@ import '../../post/presentation/post_card.dart';
 import '../../../app/constants.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color surfaceMuted = Color(0xFFB5B5B5);
-  static const Color background = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFF8E8E8E);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 class FeedScreen extends ConsumerStatefulWidget {
@@ -77,16 +85,16 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                     color: NewPalette.primarySoft,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.filter_list_rounded,
+                  child: Icon(Icons.filter_list_rounded,
                       color: NewPalette.primary, size: 18),
                 ),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'Browse Communities',
                   style: TextStyle(
                     fontFamily: 'Nunito',
                     fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     color: NewPalette.white,
                   ),
                 ),
@@ -141,6 +149,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Scaffold(
         backgroundColor: NewPalette.background,
         body: CustomScrollView(
@@ -164,21 +173,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       RichText(
-                        text: const TextSpan(
-                          text: 'w',
+                        text: TextSpan(
+                          text: 'U',
                           style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 22,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w600,
                             color: NewPalette.primary,
                             letterSpacing: -0.5,
                           ),
                           children: [
                             TextSpan(
-                              text: 'hispr',
+                              text: 'ndertone',
                               style: TextStyle(
                                 color: NewPalette.white,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w600,
                                 letterSpacing: 0.2,
                               ),
                             ),
@@ -192,7 +201,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                           style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 7.5,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w600,
                             color: NewPalette.white.withOpacity(0.35),
                             letterSpacing: 1.8,
                             height: 0.9,
@@ -215,7 +224,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: NewPalette.border),
                     ),
-                    child: const Icon(Icons.search, color: NewPalette.white),
+                    child: Icon(Icons.search, color: NewPalette.white),
                   ),
                 ),
                 GestureDetector(
@@ -228,7 +237,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: NewPalette.border),
                     ),
-                    child: const Icon(Icons.tune_rounded,
+                    child: Icon(Icons.tune_rounded,
                         color: NewPalette.white, size: 20),
                   ),
                 ),
@@ -242,8 +251,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: NewPalette.border),
                     ),
-                    child: const Icon(Icons.add,
-                        color: NewPalette.white, size: 20),
+                    child: Icon(Icons.add, color: NewPalette.white, size: 20),
                   ),
                 ),
               ],
@@ -270,7 +278,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                         labelColor: NewPalette.primary,
                         unselectedLabelColor: NewPalette.textMuted,
                         labelStyle: const TextStyle(
-                            fontFamily: 'Nunito', fontWeight: FontWeight.w800),
+                            fontFamily: 'Nunito', fontWeight: FontWeight.w600),
                         unselectedLabelStyle: const TextStyle(
                             fontFamily: 'Nunito', fontWeight: FontWeight.w500),
                         indicator: BoxDecoration(
@@ -366,6 +374,7 @@ class _FeedListState extends ConsumerState<_FeedList>
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     super.build(context);
     final streamAsync = ref.watch(feedStreamProvider(widget.feedType));
     final pagination = ref.watch(feedPaginationProvider(widget.feedType));
@@ -403,7 +412,7 @@ class _FeedListState extends ConsumerState<_FeedList>
             itemCount: all.length + (pagination.isLoadingMore ? 1 : 0),
             itemBuilder: (ctx, i) {
               if (i == all.length) {
-                return const Padding(
+                return Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(
                       child: CircularProgressIndicator(
@@ -427,6 +436,7 @@ class _ShimmerFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(top: 10),
@@ -453,6 +463,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -473,18 +484,18 @@ class _EmptyState extends StatelessWidget {
               end: const Offset(1.08, 1.08),
               duration: 2.seconds),
           const SizedBox(height: 22),
-          const Text(
+          Text(
             'Nothing here yet',
             style: TextStyle(
               fontFamily: 'Nunito',
               fontSize: 20,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: NewPalette.white,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Be the first to whispr something!',
+          Text(
+            'Be the first to share something!',
             style: TextStyle(fontSize: 13, color: NewPalette.surfaceMuted),
           ),
         ],

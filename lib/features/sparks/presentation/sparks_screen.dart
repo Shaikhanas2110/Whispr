@@ -10,10 +10,19 @@ import 'sparks_card.dart';
 import '../data/sparks_video_cache.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color background = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
-  static final Color textMuted = white.withOpacity(0.7);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
+
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+
+  static Color get textMuted => white.withOpacity(0.7);
 }
 
 class ReelsState {
@@ -185,6 +194,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final state = ref.watch(reelsProvider);
 
     // Whenever the post list changes (initial load, live updates, loadMore),
@@ -206,7 +216,7 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
         body: Stack(
           children: [
             if (state.isLoading)
-              const Center(
+              Center(
                 child: CircularProgressIndicator(color: NewPalette.primary),
               )
             else if (state.error != null)
@@ -256,18 +266,18 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
                             color: Colors.black.withOpacity(0.35),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.arrow_back_rounded,
+                          child: Icon(Icons.arrow_back_rounded,
                               color: NewPalette.white, size: 20),
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Text(
+                    Text(
                       'Sparks',
                       style: TextStyle(
                         fontFamily: 'Nunito',
                         fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w600,
                         color: NewPalette.white,
                       ),
                     ),
@@ -293,6 +303,7 @@ class _ReelsErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -309,10 +320,10 @@ class _ReelsErrorState extends StatelessWidget {
                     ? 'Firestore needs an index for this query'
                     : 'Could not load reels',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: NewPalette.white,
                 ),
               ),
@@ -336,11 +347,11 @@ class _ReelsErrorState extends StatelessWidget {
                       color: NewPalette.primary,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Retry',
                       style: TextStyle(
                         fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: NewPalette.background,
                       ),
                     ),
@@ -360,6 +371,7 @@ class _EmptyReels extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Center(
       child: Semantics(
         label: "EmptySparksState",
@@ -368,12 +380,12 @@ class _EmptyReels extends StatelessWidget {
           children: [
             const Text('🎬', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No sparks yet',
               style: TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 18,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: NewPalette.white,
               ),
             ),

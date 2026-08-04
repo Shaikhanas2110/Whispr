@@ -8,16 +8,23 @@ import '../data/notification_service.dart';
 
 // Locally defined palette tokens based on your specified hex codes
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color surfaceMuted = Color(0xFFB5B5B5); // Neutral Gray
-  static const Color background = Color(0xFF000000); // Deep Black
-  static const Color white = Color(0xFFFFFFFF); // Crisp White
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  // Derived style opacities for sleek UI nesting
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 class NotificationsScreen extends ConsumerWidget {
@@ -25,6 +32,7 @@ class NotificationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     final notifsAsync = ref.watch(notificationsProvider);
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
@@ -42,12 +50,12 @@ class NotificationsScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 RichText(
-                  text: const TextSpan(
+                  text: TextSpan(
                     text: 'N',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: NewPalette.primary, // Vibrant Lime Accent
                       letterSpacing: -0.5,
                     ),
@@ -56,7 +64,7 @@ class NotificationsScreen extends ConsumerWidget {
                         text: 'otifications',
                         style: TextStyle(
                           color: NewPalette.white, // High Contrast Crisp White
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -70,7 +78,7 @@ class NotificationsScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 7.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: NewPalette.white.withOpacity(0.35),
                       letterSpacing: 1.5,
                       height: 0.9,
@@ -94,15 +102,15 @@ class NotificationsScreen extends ConsumerWidget {
                   ? null
                   : () =>
                       ref.read(notificationServiceProvider).markAllRead(uid),
-              icon: const Icon(Icons.done_all_rounded,
+              icon: Icon(Icons.done_all_rounded,
                   size: 14, color: NewPalette.primary),
-              label: const Text(
+              label: Text(
                 'Read all',
                 style: TextStyle(
                   fontFamily: 'Nunito',
                   color: NewPalette.primary,
                   fontSize: 12,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               style: TextButton.styleFrom(
@@ -119,8 +127,8 @@ class NotificationsScreen extends ConsumerWidget {
         ],
       ),
       body: notifsAsync.when(
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: NewPalette.primary)),
+        loading: () =>
+            Center(child: CircularProgressIndicator(color: NewPalette.primary)),
         error: (e, _) => Center(
             child: Text('Error: $e',
                 style: const TextStyle(color: Colors.redAccent))),
@@ -165,6 +173,7 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
       child: Text(
@@ -172,7 +181,7 @@ class _SectionLabel extends StatelessWidget {
         style: TextStyle(
           fontFamily: 'Nunito',
           fontSize: 11,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w600,
           color: NewPalette.textMuted,
           letterSpacing: 1,
         ),
@@ -188,6 +197,7 @@ class _NotifTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     final cardColor = notif.isRead
         ? NewPalette.cardBg
         : NewPalette.surfaceMuted.withOpacity(0.22);
@@ -260,7 +270,7 @@ class _NotifTile extends ConsumerWidget {
                             fontSize: 13,
                             fontWeight: notif.isRead
                                 ? FontWeight.w600
-                                : FontWeight.w800,
+                                : FontWeight.w600,
                             color: NewPalette.white,
                           ),
                         ),
@@ -299,6 +309,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -319,17 +330,17 @@ class _EmptyState extends StatelessWidget {
               end: const Offset(1.08, 1.08),
               duration: 2.seconds),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'All caught up!',
             style: TextStyle(
               fontFamily: 'Nunito',
               fontSize: 20,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: NewPalette.white,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'We\'ll let you know when something happens',
             style: TextStyle(fontSize: 13, color: NewPalette.surfaceMuted),
             textAlign: TextAlign.center,

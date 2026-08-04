@@ -9,17 +9,26 @@ import '../../auth/domain/user_model.dart';
 import '../../../shared/widgets/w_avatar.dart';
 import '../../../app/constants.dart';
 import '../../community/data/community_service.dart'; // Ensure this matches your public provider location path
+import '../../../app/theme.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color surfaceMuted = Color(0xFFB5B5B5);
-  static const Color background = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 class ProfileScreen extends ConsumerWidget {
@@ -27,6 +36,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
@@ -46,12 +56,12 @@ class ProfileScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 RichText(
-                  text: const TextSpan(
+                  text: TextSpan(
                     text: 'P',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: NewPalette.primary,
                       letterSpacing: -0.5,
                     ),
@@ -60,7 +70,7 @@ class ProfileScreen extends ConsumerWidget {
                         text: 'rofile',
                         style: TextStyle(
                           color: NewPalette.white,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -74,7 +84,7 @@ class ProfileScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 7.5,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: NewPalette.white.withOpacity(0.35),
                       letterSpacing: 1.5,
                       height: 0.9,
@@ -100,7 +110,7 @@ class ProfileScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: NewPalette.border),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.settings_outlined,
                 color: NewPalette.white,
                 size: 20,
@@ -110,13 +120,13 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
       body: userAsync.when(
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: NewPalette.primary)),
+        loading: () =>
+            Center(child: CircularProgressIndicator(color: NewPalette.primary)),
         error: (e, _) => Center(
             child: Text('Error: $e',
                 style: const TextStyle(color: Colors.redAccent))),
         data: (user) => user == null
-            ? const Center(
+            ? Center(
                 child: Text('Not signed in',
                     style: TextStyle(
                         fontFamily: 'Nunito', color: NewPalette.white)))
@@ -147,11 +157,11 @@ class _ProfileBody extends ConsumerWidget {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: NewPalette.border)),
-        title: const Text('New pseudonym?',
+        title: Text('New pseudonym?',
             style: TextStyle(
                 fontFamily: 'Nunito',
                 color: NewPalette.white,
-                fontWeight: FontWeight.w800)),
+                fontWeight: FontWeight.w600)),
         content: TextStyle(
                 color: NewPalette.surfaceMuted,
                 fontSize: 13,
@@ -161,7 +171,7 @@ class _ProfileBody extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
+            child: Text('Cancel',
                 style: TextStyle(
                     fontFamily: 'Nunito',
                     color: NewPalette.white,
@@ -184,7 +194,7 @@ class _ProfileBody extends ConsumerWidget {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text('You are now $newPseudo 🎭',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontFamily: 'Nunito',
                           fontWeight: FontWeight.w700,
                           color: NewPalette.background)),
@@ -201,7 +211,7 @@ class _ProfileBody extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Regenerate',
+            child: Text('Regenerate',
                 style: TextStyle(
                     fontFamily: 'Nunito',
                     fontWeight: FontWeight.w700,
@@ -224,7 +234,7 @@ class _ProfileBody extends ConsumerWidget {
             style: TextStyle(
                 fontFamily: 'Nunito',
                 color: Colors.redAccent,
-                fontWeight: FontWeight.w800)),
+                fontWeight: FontWeight.w600)),
         content: TextStyle(
                 color: NewPalette.surfaceMuted,
                 fontSize: 13,
@@ -279,11 +289,11 @@ class _ProfileBody extends ConsumerWidget {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: NewPalette.border)),
-        title: const Text('Sign out?',
+        title: Text('Sign out?',
             style: TextStyle(
                 fontFamily: 'Nunito',
                 color: NewPalette.white,
-                fontWeight: FontWeight.w800)),
+                fontWeight: FontWeight.w600)),
         content: TextStyle(
                 color: NewPalette.surfaceMuted,
                 fontSize: 13,
@@ -311,7 +321,7 @@ class _ProfileBody extends ConsumerWidget {
                 side: BorderSide(color: NewPalette.border),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12))),
-            child: const Text('Sign Out',
+            child: Text('Sign Out',
                 style: TextStyle(
                     fontFamily: 'Nunito',
                     color: NewPalette.white,
@@ -333,6 +343,7 @@ class _ProfileBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     final communitiesAsync = ref.watch(communitiesStreamProvider);
 
     return SingleChildScrollView(
@@ -361,10 +372,10 @@ class _ProfileBody extends ConsumerWidget {
                 const SizedBox(height: 14),
                 Text(
                   user.pseudonym,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 22,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                       color: NewPalette.white,
                       letterSpacing: -0.4),
                 ),
@@ -375,11 +386,11 @@ class _ProfileBody extends ConsumerWidget {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                           shape: BoxShape.circle, color: NewPalette.primary),
                     ),
                     const SizedBox(width: 6),
-                    const Text('Anonymous Status',
+                    Text('Anonymous Status',
                         style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 13,
@@ -394,12 +405,12 @@ class _ProfileBody extends ConsumerWidget {
                           color: NewPalette.primary,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text('✦ PREMIUM',
+                        child: Text('✦ PREMIUM',
                             style: TextStyle(
                                 fontFamily: 'Nunito',
                                 fontSize: 9,
                                 color: NewPalette.background,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w600,
                                 letterSpacing: 0.5)),
                       ),
                     ],
@@ -438,11 +449,11 @@ class _ProfileBody extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Whispr Premium',
+                        Text('Undertone Premium',
                             style: TextStyle(
                                 fontFamily: 'Nunito',
                                 fontSize: 15,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w600,
                                 color: NewPalette.white)),
                         const SizedBox(height: 2),
                         Text('No ads · 1k character limits · Badges',
@@ -463,26 +474,26 @@ class _ProfileBody extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
                     ),
-                    child: const Text('\$3.99/mo',
+                    child: Text('\$3.99/mo',
                         style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 12,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
                             color: NewPalette.background)),
                   ),
                 ],
               ),
             ).animate(delay: 150.ms).fadeIn(duration: 400.ms),
           const SizedBox(height: 20),
-          const Text('Your Communities',
+          Text('Your Communities',
               style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 17,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: NewPalette.white)),
           const SizedBox(height: 10),
           communitiesAsync.when(
-            loading: () => const Center(
+            loading: () => Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
                 child: CircularProgressIndicator(
@@ -517,11 +528,11 @@ class _ProfileBody extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 20),
-          const Text('Account',
+          Text('Account',
               style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 17,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: NewPalette.white)),
           const SizedBox(height: 10),
           _ActionTile(
@@ -556,6 +567,7 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -567,10 +579,10 @@ class _StatPill extends StatelessWidget {
         child: Column(
           children: [
             Text(value,
-                style: const TextStyle(
+                style: TextStyle(
                     fontFamily: 'Nunito',
                     fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     color: NewPalette.primary)),
             const SizedBox(height: 2),
             Text(label,
@@ -592,6 +604,7 @@ class _EmptySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -614,6 +627,7 @@ class _CommunityRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     final color = Color(data['color'] as int);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -630,7 +644,7 @@ class _CommunityRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
               child: Text(data['name'] as String? ?? '',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'Nunito',
                       fontWeight: FontWeight.w700,
                       color: NewPalette.white))),
@@ -657,6 +671,7 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -694,6 +709,7 @@ class _SettingsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
       child: Column(
@@ -710,13 +726,23 @@ class _SettingsSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 18),
-          const Text('Settings',
+          Text('Settings',
               style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: NewPalette.white)),
           const SizedBox(height: 16),
+          _SettingsRow(
+            icon: NewPalette.isDark
+                ? Icons.dark_mode_outlined
+                : Icons.light_mode_outlined,
+            label: 'Dark Mode',
+            trailing: Switch(
+                value: NewPalette.isDark,
+                onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
+                activeColor: NewPalette.primary),
+          ),
           _SettingsRow(
             icon: Icons.notifications_outlined,
             label: 'Push Notifications',
@@ -759,6 +785,7 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -767,7 +794,7 @@ class _SettingsRow extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
               child: Text(label,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 14,
                       color: NewPalette.white,
@@ -792,6 +819,7 @@ class _PremiumSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Container(
       padding: EdgeInsets.only(
         left: 24,
@@ -823,15 +851,15 @@ class _PremiumSheet extends StatelessWidget {
               shape: BoxShape.circle,
               color: NewPalette.primarySoft,
             ),
-            child: const Text('✦',
+            child: Text('✦',
                 style: TextStyle(fontSize: 26, color: NewPalette.primary)),
           ),
           const SizedBox(height: 12),
-          const Text('Whispr Premium',
+          Text('Undertone Premium',
               style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 20,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w600,
                   color: NewPalette.white)),
           const SizedBox(height: 4),
           TextStyle(
@@ -857,13 +885,13 @@ class _PremiumSheet extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(p.$2,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontFamily: 'Nunito',
                               fontSize: 13,
                               color: NewPalette.white,
                               fontWeight: FontWeight.w700)),
                     ),
-                    const Icon(Icons.check_rounded,
+                    Icon(Icons.check_rounded,
                         size: 16, color: NewPalette.primary),
                   ],
                 ),
@@ -925,6 +953,7 @@ class _PriceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -953,7 +982,7 @@ class _PriceButton extends StatelessWidget {
               style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 20,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w600,
                   color: isBest ? NewPalette.background : NewPalette.white),
             ),
             Text(

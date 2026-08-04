@@ -4,15 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../notifications/data/notification_service.dart';
 
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color surfaceMuted = Color(0xFFB5B5B5);
-  static const Color background = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFF8E8E8E);
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 class HomeShell extends ConsumerWidget {
@@ -29,6 +36,7 @@ class HomeShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NewPalette.sync(context);
     final location = GoRouterState.of(context).uri.toString();
     final idx = _locationIndex(location);
     final unread = ref.watch(unreadCountProvider);
@@ -49,6 +57,7 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Container(
       decoration: BoxDecoration(
         color: NewPalette.background,
@@ -141,6 +150,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -160,11 +170,14 @@ class _NavItem extends StatelessWidget {
                     color:
                         isActive ? NewPalette.primarySoft : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
-                    border: isActive
-                        ? Border.all(
-                            color: NewPalette.primary.withOpacity(0.2),
-                            width: 1)
-                        : null,
+                    // Always supply a 1-width border (transparent when inactive)
+                    // so the container dimensions remain identical across states.
+                    border: Border.all(
+                      color: isActive
+                          ? NewPalette.primary.withOpacity(0.2)
+                          : Colors.transparent,
+                      width: 1,
+                    ),
                   ),
                   child: Icon(
                     isActive ? icon : inactiveIcon,
@@ -188,10 +201,10 @@ class _NavItem extends StatelessWidget {
                           const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
                         badge > 9 ? '9+' : '$badge',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 9,
                           color: NewPalette.background,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w600,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -205,7 +218,7 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Nunito',
                 fontSize: 10,
-                fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 color: isActive ? NewPalette.primary : NewPalette.textMuted,
               ),
               child: Text(label),

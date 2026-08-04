@@ -8,16 +8,23 @@ import '../data/auth_service.dart';
 
 // Locally defined palette tokens based on your specified hex codes
 class NewPalette {
-  static const Color primary = Color(0xFFA7ED10); // Vibrant Lime
-  static const Color surfaceMuted = Color(0xFFB5B5B5); // Neutral Gray
-  static const Color background = Color(0xFF000000); // Deep Black
-  static const Color white = Color(0xFFFFFFFF); // Crisp White
+  static bool isDark = true;
+  static void sync(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+  }
 
-  // Derived style opacities for sleek UI nesting
-  static final Color cardBg = surfaceMuted.withOpacity(0.12);
-  static final Color border = surfaceMuted.withOpacity(0.25);
-  static final Color primarySoft = primary.withOpacity(0.15);
-  static final Color textMuted = surfaceMuted.withOpacity(0.7);
+  static Color get primary =>
+      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get background =>
+      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
+  static Color get white =>
+      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get surfaceMuted => const Color(0xFFB5B5B5);
+
+  static Color get cardBg => surfaceMuted.withOpacity(0.12);
+  static Color get border => surfaceMuted.withOpacity(0.25);
+  static Color get primarySoft => primary.withOpacity(0.15);
+  static Color get textMuted => surfaceMuted.withOpacity(0.7);
 }
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -58,7 +65,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       stateMachineIndex: 2,
       title: 'Safe & Moderated',
       subtitle:
-          'AI-powered moderation systems keep Whispr a safe, healthy space for all.',
+          'AI-powered moderation systems keep Undertone a safe, healthy space for all.',
     ),
   ];
 
@@ -100,6 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Scaffold(
       backgroundColor: NewPalette.background,
       body: SafeArea(
@@ -115,14 +123,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   style: TextStyle(
                     fontFamily: 'Nunito',
                     fontSize: 13,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     color: NewPalette.textMuted,
                     letterSpacing: 1.5,
                   ),
                 ),
               ),
             ),
-
             Expanded(
               flex: 5,
               child: Padding(
@@ -137,7 +144,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
-                    child: const RiveAnimation.asset(
+                    child: RiveAnimation.asset(
                       'assets/images/welcome3.riv',
                       fit: BoxFit.contain,
                       placeHolder: Center(
@@ -149,7 +156,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
               ),
             ),
-
             Expanded(
               flex: 3,
               child: PageView.builder(
@@ -163,7 +169,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 itemBuilder: (ctx, i) => _TextContentBlock(data: _pages[i]),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
               child: Column(
@@ -171,7 +176,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   SmoothPageIndicator(
                     controller: _pageCtrl,
                     count: _pages.length,
-                    effect: const ExpandingDotsEffect(
+                    effect: ExpandingDotsEffect(
                       activeDotColor: NewPalette.primary,
                       dotColor: NewPalette.surfaceMuted,
                       dotHeight: 6,
@@ -198,7 +203,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                   style: TextStyle(
                                     fontFamily: 'Nunito',
                                     color: NewPalette.textMuted,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w600,
                                     fontSize: 15,
                                   ),
                                 ),
@@ -218,13 +223,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                     border:
                                         Border.all(color: NewPalette.border),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     children: [
                                       Text(
                                         'Next',
                                         style: TextStyle(
                                           fontFamily: 'Nunito',
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w600,
                                           fontSize: 15,
                                           color: NewPalette.white,
                                         ),
@@ -252,7 +257,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 ),
                               ),
                               child: _loading
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
@@ -260,12 +265,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                         color: NewPalette.background,
                                       ),
                                     )
-                                  : const Text(
+                                  : Text(
                                       'Start Whispering →',
                                       style: TextStyle(
                                         fontFamily: 'Nunito',
                                         fontSize: 16,
-                                        fontWeight: FontWeight.w900,
+                                        fontWeight: FontWeight.w600,
                                         color: NewPalette.background,
                                       ),
                                     ),
@@ -301,6 +306,7 @@ class _TextContentBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    NewPalette.sync(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -310,10 +316,10 @@ class _TextContentBlock extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             data.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Nunito',
               fontSize: 26,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w600,
               color: NewPalette.white,
               letterSpacing: -0.5,
             ),

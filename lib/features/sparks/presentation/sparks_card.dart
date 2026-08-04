@@ -12,8 +12,8 @@ import '../../../shared/widgets/hashtag_text.dart';
 import '../data/sparks_video_cache.dart';
 
 class ReelPalette {
-  static const Color primary = Color(0xFFA7ED10);
-  static const Color background = Color(0xFF000000);
+  static const Color primary = Color(0xFF8C97B8);
+  static const Color background = Color(0xFF0D0D10);
   static const Color white = Color(0xFFFFFFFF);
   static final Color textMuted = white.withOpacity(0.7);
 }
@@ -182,11 +182,12 @@ class _ReelCardState extends ConsumerState<ReelCard> {
   }
 
   Future<void> _share() async {
-    final url = 'https://whispr.app/post/${widget.post.id}';
+    final url = 'https://undertone.app/post/${widget.post.id}';
     final preview = widget.post.content.length > 100
         ? '${widget.post.content.substring(0, 100)}…'
         : widget.post.content;
-    await Share.share('$preview\n\n$url', subject: 'Check this Whispr reel 🎬');
+    await Share.share('$preview\n\n$url',
+        subject: 'Check this clip on Undertone');
   }
 
   void _openComments() {
@@ -337,7 +338,7 @@ class _ReelCardState extends ConsumerState<ReelCard> {
                                 style: const TextStyle(
                                   fontFamily: 'Nunito',
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w600,
                                   color: ReelPalette.white,
                                 ),
                               ),
