@@ -93,7 +93,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             const SizedBox(height: 32),
 
             Text(
-              'whispr',
+              'undertone',
               style: TextStyle(
                 fontFamily: 'Nunito',
                 color: NewPalette.white,
