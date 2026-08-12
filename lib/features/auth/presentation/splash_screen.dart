@@ -5,7 +5,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:rive/rive.dart';
 import '../data/auth_service.dart';
 
-// Locally defined palette tokens based on your specified hex codes
 class NewPalette {
   static bool isDark = true;
   static void sync(BuildContext context) {
