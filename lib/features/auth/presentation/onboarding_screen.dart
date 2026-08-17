@@ -64,7 +64,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       stateMachineIndex: 2,
       title: 'Safe & Moderated',
       subtitle:
-          'AI-powered moderation systems keep Undertone a safe, healthy space for all.',
+          'Moderation systems keep Undertone a safe, healthy space for all.',
     ),
   ];
 
