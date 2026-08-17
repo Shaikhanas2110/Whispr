@@ -8,7 +8,7 @@ import '../../auth/data/auth_service.dart';
 import '../../auth/domain/user_model.dart';
 import '../../../shared/widgets/w_avatar.dart';
 import '../../../app/constants.dart';
-import '../../community/data/community_service.dart'; // Ensure this matches your public provider location path
+import '../../community/data/community_service.dart';
 import '../../../app/theme.dart';
 
 class NewPalette {
