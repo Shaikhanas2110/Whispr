@@ -17,8 +17,7 @@ class NewPalette {
     isDark = Theme.of(context).brightness == Brightness.dark;
   }
 
-  static Color get primary =>
-      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get primary => isDark ? const Color(0xFF8C97B8) : Colors.red;
   static Color get background =>
       isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
   static Color get white =>

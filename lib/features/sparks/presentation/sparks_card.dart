@@ -12,7 +12,7 @@ import '../../../shared/widgets/hashtag_text.dart';
 import '../data/sparks_video_cache.dart';
 
 class ReelPalette {
-  static const Color primary = Color(0xFF8C97B8);
+  static const Color primary = Colors.red;
   static const Color background = Color(0xFF0D0D10);
   static const Color white = Color(0xFFFFFFFF);
   static final Color textMuted = white.withOpacity(0.7);

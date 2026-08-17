@@ -9,8 +9,7 @@ class NewPalette {
     isDark = Theme.of(context).brightness == Brightness.dark;
   }
 
-  static Color get primary =>
-      isDark ? const Color(0xFF8C97B8) : const Color(0xFF5B6B8C);
+  static Color get primary => isDark ? const Color(0xFF8C97B8) : Colors.red;
   static Color get background =>
       isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
   static Color get white =>
@@ -162,28 +161,10 @@ class _NavItem extends StatelessWidget {
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                  decoration: BoxDecoration(
-                    color:
-                        isActive ? NewPalette.primarySoft : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    // Always supply a 1-width border (transparent when inactive)
-                    // so the container dimensions remain identical across states.
-                    border: Border.all(
-                      color: isActive
-                          ? NewPalette.primary.withOpacity(0.2)
-                          : Colors.transparent,
-                      width: 1,
-                    ),
-                  ),
-                  child: Icon(
-                    isActive ? icon : inactiveIcon,
-                    size: 22,
-                    color: isActive ? NewPalette.primary : NewPalette.textMuted,
-                  ),
+                Icon(
+                  isActive ? icon : inactiveIcon,
+                  size: 22,
+                  color: isActive ? NewPalette.primary : NewPalette.textMuted,
                 ),
                 if (badge > 0)
                   Positioned(
