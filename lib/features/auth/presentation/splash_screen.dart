@@ -18,7 +18,6 @@ class NewPalette {
       isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
   static Color get surfaceMuted => const Color(0xFFB5B5B5);
 
-  // Derived style opacities for sleek UI nesting
   static Color get cardBg => surfaceMuted.withOpacity(0.12);
   static Color get border => surfaceMuted.withOpacity(0.25);
   static Color get primarySoft => primary.withOpacity(0.15);
