@@ -6,7 +6,7 @@ import 'package:rive/rive.dart';
 import '../data/auth_service.dart';
 
 class NewPalette {
-  static bool isDark = true;
+  static bool isDark = false;
   static void sync(BuildContext context) {
     isDark = Theme.of(context).brightness == Brightness.dark;
   }
