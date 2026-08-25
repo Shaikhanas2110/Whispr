@@ -97,7 +97,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.8,
                 fontSize: 44,
-              ),
+              
             )
                 .animate(delay: 150.ms)
                 .fadeIn(duration: 400.ms)

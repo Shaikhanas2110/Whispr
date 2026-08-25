@@ -201,7 +201,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                             fontFamily: 'Nunito',
                             fontSize: 7.5,
                             fontWeight: FontWeight.w600,
-                            color: NewPalette.white.withOpacity(0.35),
+                            color: NewPalette.white.withValues(alpha: 0.35),
                             letterSpacing: 1.8,
                             height: 0.9,
                           ),
