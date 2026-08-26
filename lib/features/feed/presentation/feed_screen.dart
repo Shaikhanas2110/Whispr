@@ -156,11 +156,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
             parent: AlwaysScrollableScrollPhysics(),
           ),
           slivers: [
-            // 1. Smooth Floating Top App Bar
             SliverAppBar(
               floating: true,
               snap: true,
-              pinned: false, // Allows the main identity bar to hide smoothly
+              pinned: false,
               backgroundColor: NewPalette.background,
               elevation: 0,
               titleSpacing: 16,
@@ -256,7 +255,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
               ],
             ),
 
-            // 2. Lag-Free Pinned TabBar Header (Stays pinned to the top)
             SliverPersistentHeader(
               pinned: true,
               delegate: _SliverTabBarDelegate(
@@ -301,7 +299,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
               ),
             ),
 
-            // 3. Keep the body inside a view window or use full list mapping directly
             SliverFillRemaining(
               child: TabBarView(
                 controller: _tab,
