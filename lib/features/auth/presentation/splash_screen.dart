@@ -11,11 +11,9 @@ class NewPalette {
     isDark = Theme.of(context).brightness == Brightness.dark;
   }
 
-  static Color get primary => isDark ? const Color(0xFF8C97B8) : Colors.red;
-  static Color get background =>
-      isDark ? const Color(0xFF0D0D10) : const Color(0xFFFFFFFF);
-  static Color get white =>
-      isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1C1C1F);
+  static Color get primary => Colors.red;
+  static Color get background => const Color(0xFFFFFFFF);
+  static Color get white => const Color(0xFF1C1C1F);
   static Color get surfaceMuted => const Color(0xFFB5B5B5);
 
   static Color get cardBg => surfaceMuted.withOpacity(0.12);
@@ -89,16 +87,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
             const SizedBox(height: 32),
 
-            Text(
-              'undertone',
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                color: NewPalette.white,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.8,
-                fontSize: 44,
-              
-            )
+            Text('undertone',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      color: NewPalette.white,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.8,
+                      fontSize: 44,
+                    ))
                 .animate(delay: 150.ms)
                 .fadeIn(duration: 400.ms)
                 .slideY(begin: 0.15, end: 0),
