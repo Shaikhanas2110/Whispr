@@ -30,7 +30,6 @@ final feedStreamProvider =
       .map((snap) => snap.docs.map((d) => WPost.fromFirestore(d)).toList());
 });
 
-// ── Pagination state (load-more pages beyond page 1) ──────
 class FeedState {
   final List<WPost> extra;
   final bool isLoadingMore;
