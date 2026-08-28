@@ -79,7 +79,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               ),
             )
                 .animate()
-                .scale(duration: 600.ms, curve: Curves.easeOutBack)
+                .scale(duration: 650.ms, curve: Curves.easeOutBack)
                 .then(delay: 100.ms)
                 .shimmer(
                     duration: 1000.ms,
