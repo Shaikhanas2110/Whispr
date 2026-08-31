@@ -292,7 +292,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 0),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 7),
                     ],
                   ),
                 ),

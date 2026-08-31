@@ -37,7 +37,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _init() async {
-    // Structural frame execution initialization hold period
     await Future.delayed(const Duration(milliseconds: 2500));
     if (!mounted) return;
 
