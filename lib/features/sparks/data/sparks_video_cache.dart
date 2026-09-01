@@ -40,7 +40,6 @@ class ReelVideoCache {
   /// Fire-and-forget preload — call this for reels just ahead of the
   /// current one so they're ready by the time the user scrolls to them.
   void preload(WPost post) {
-    // ignore: unawaited_futures
     ensure(post);
   }
 
