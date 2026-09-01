@@ -6,7 +6,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/notification_service.dart';
 
-// Locally defined palette tokens based on your specified hex codes
 class NewPalette {
   static bool isDark = true;
   static void sync(BuildContext context) {
@@ -55,14 +54,14 @@ class NotificationsScreen extends ConsumerWidget {
                       fontFamily: 'Nunito',
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: NewPalette.primary, // Vibrant Lime Accent
+                      color: NewPalette.primary,
                       letterSpacing: -0.5,
                     ),
                     children: [
                       TextSpan(
                         text: 'otifications',
                         style: TextStyle(
-                          color: NewPalette.white, // High Contrast Crisp White
+                          color: NewPalette.white,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                         ),
